@@ -6,3 +6,4 @@ dist/
 build/
 DerivedData/
 *.xcodeproj/xcuserdata/
+*.xcodeproj
