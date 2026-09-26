@@ -73,3 +73,15 @@ import Testing
         #expect(m.macro(named: "Morning")?.stepsJSON.contains("Xcode") == true)
     }
 }
+
+@Suite struct MemoryCapTests {
+    @Test func usageCapIsPerKindAndSequencesAreHashed() throws {
+        let m = try Memory(path: NSTemporaryDirectory() + "macagent-cap-\(UUID().uuidString).db")
+        m.rowLimit = 5
+        m.bump(kind: "app", name: "Xcode"); m.bump(kind: "app", name: "Safari")
+        for i in 0..<8 { _ = m.noteSequence("openApplication:{\"name\":\"A\(i)\"}|openPath:{\"path\":\"/very/long/path/\(i)\"}") }
+        #expect(m.top(kind: "app", n: 10).count == 2)
+        #expect(m.top(kind: "seq", n: 10).count == 5)
+        #expect(m.top(kind: "seq", n: 1).first?.count == 16)
+    }
+}

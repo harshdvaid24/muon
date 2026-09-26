@@ -14,6 +14,8 @@ enum Settings {
     static var model: String { d.string(forKey: Key.model) ?? "qwen/qwen3.5-9b" }
     static var fallbackModel: String { d.string(forKey: Key.fallbackModel) ?? "qwen/qwen3.5-4b" }
     static var modelTTL: Int { d.object(forKey: Key.modelTTL) as? Int ?? 300 }
+    /// Bounded context so LM Studio never JIT-loads with a 100k+ token KV cache.
+    static var contextLength: Int { d.object(forKey: "contextLength") as? Int ?? 16384 }
     static var confidenceThreshold: Double { d.object(forKey: Key.confidence) as? Double ?? 0.6 }
     static var lmsPath: String { d.string(forKey: Key.lmsPath) ?? NSHomeDirectory() + "/.lmstudio/bin/lms" }
 

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// Tier-0 memory: bounded SQLite tables that make repeated work free.
@@ -86,7 +87,7 @@ final class Memory {
         INSERT INTO usage(kind, name, hits, last_used) VALUES(?, ?, 1, ?)
         ON CONFLICT(kind, name) DO UPDATE SET hits = hits + 1, last_used = excluded.last_used
         """, [kind, name, ts()])
-        evict(table: "usage", keys: ["kind", "name"])
+        evict(table: "usage", keys: ["kind", "name"], scope: ("kind", kind))
     }
 
     func top(kind: String, n: Int) -> [String] {
@@ -94,9 +95,14 @@ final class Memory {
     }
 
     /// Counts how often a tool sequence has recurred. Returns the new count.
-    func noteSequence(_ hash: String) -> Int {
-        bump(kind: "seq", name: hash)
-        return (db.rows("SELECT hits FROM usage WHERE kind = 'seq' AND name = ?", [hash]).first?["hits"] as? Int) ?? 1
+    func noteSequence(_ sequence: String) -> Int {
+        let key = Self.digest(sequence)
+        bump(kind: "seq", name: key)
+        return (db.rows("SELECT hits FROM usage WHERE kind = 'seq' AND name = ?", [key]).first?["hits"] as? Int) ?? 1
+    }
+
+    static func digest(_ s: String) -> String {
+        SHA256.hash(data: Data(s.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
     }
 
     // MARK: Macros
@@ -148,11 +154,13 @@ final class Memory {
         rows.sorted { frecency($0) > frecency($1) }
     }
 
-    private func evict(table: String, keys: [String]) {
-        let count = (db.rows("SELECT COUNT(*) AS c FROM \(table)").first?["c"] as? Int) ?? 0
+    private func evict(table: String, keys: [String], scope: (column: String, value: String)? = nil) {
+        let scopeSQL = scope.map { " WHERE \($0.column) = ?" } ?? ""
+        let scopeArgs: [Any?] = scope.map { [$0.value] } ?? []
+        let count = (db.rows("SELECT COUNT(*) AS c FROM \(table)\(scopeSQL)", scopeArgs).first?["c"] as? Int) ?? 0
         guard count > rowLimit else { return }
         let cols = (keys + ["hits", "last_used"]).joined(separator: ", ")
-        let victims = ranked(db.rows("SELECT \(cols) FROM \(table)")).suffix(count - rowLimit)
+        let victims = ranked(db.rows("SELECT \(cols) FROM \(table)\(scopeSQL)", scopeArgs)).suffix(count - rowLimit)
         let whereClause = keys.map { "\($0) = ?" }.joined(separator: " AND ")
         for v in victims { db.run("DELETE FROM \(table) WHERE \(whereClause)", keys.map { v[$0] }) }
     }

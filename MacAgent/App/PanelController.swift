@@ -84,7 +84,11 @@ extension PanelController: Approver {
             return alert.runModal() == .alertFirstButtonReturn ? .allow : .cancel
         }
         return await withCheckedContinuation { cont in
+            model.pending?.decide(.cancel) // a newer request supersedes any card still waiting
+            var done = false
             model.pending = PaletteModel.Pending(title: a.title, detail: a.detail, destructive: false, allowAlwaysLabel: a.alwaysLabel) { [weak self] d in
+                guard !done else { return }
+                done = true
                 self?.model.pending = nil
                 cont.resume(returning: d)
             }

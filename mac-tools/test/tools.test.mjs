@@ -60,3 +60,20 @@ test("audit log written", async () => {
   const log = await fs.readFile(path.join(os.homedir(), "Library/Application Support/MacAgent/audit.jsonl"), "utf8");
   assert.ok(log.split("\n").some((l) => l.includes('"tool":"readFile"')));
 });
+
+// --- review fix pass ---
+test("openPath refuses executables, app bundles and terminal apps", async () => {
+  await fs.writeFile(path.join(SANDBOX, "deploy.sh"), "#!/bin/sh\necho hi\n", { mode: 0o755 });
+  await fs.mkdir(path.join(SANDBOX, "Fake.app/Contents/MacOS"), { recursive: true });
+  await fs.writeFile(path.join(SANDBOX, "notes.command"), "echo hi\n");
+  const sh = await s.tool("openPath", { path: path.join(SANDBOX, "deploy.sh") });
+  assert.ok(sh.isError && /executable/.test(sh.text), sh.text);
+  const app = await s.tool("openPath", { path: path.join(SANDBOX, "Fake.app") });
+  assert.ok(app.isError && /app bundle/.test(app.text), app.text);
+  const cmd = await s.tool("openPath", { path: path.join(SANDBOX, "notes.command") });
+  assert.ok(cmd.isError && /executable/.test(cmd.text), cmd.text);
+  const term = await s.tool("openPath", { path: path.join(SANDBOX, "hello.txt"), app: "Terminal" });
+  assert.ok(term.isError && /terminal/i.test(term.text), term.text);
+  const list = await s.call("tools/list");
+  assert.match(list.result.tools.find((t) => t.name === "openPath").description, /never runs executables/i);
+});

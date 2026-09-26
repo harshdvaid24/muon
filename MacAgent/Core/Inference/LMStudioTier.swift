@@ -56,11 +56,25 @@ enum LMStudioTier {
         p.arguments = ["server", "start"]
         p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
         guard (try? p.run()) != nil else { return false }
+        p.waitUntilExit()
+        guard p.terminationStatus == 0 else { return false }
         for _ in 0..<12 {
             try? await Task.sleep(for: .seconds(1))
             if await isReachable() { return true }
         }
         return false
+    }
+
+    /// Loads the model with a bounded context and TTL (instead of LM Studio's JIT defaults). Best effort.
+    static func ensureLoaded(_ model: String, status: (String) -> Void) async {
+        if await loadedModels().contains(model) { return }
+        status("Loading \(model)…")
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: Settings.lmsPath)
+        p.arguments = ["load", model, "--context-length", String(Settings.contextLength), "--ttl", String(Settings.modelTTL), "-y"]
+        p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return }
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in p.terminationHandler = { _ in cont.resume() } }
     }
 
     static func unloadAll() {
@@ -78,6 +92,7 @@ enum LMStudioTier {
         guard await ensureServer() else { throw LMError.unreachable }
         let models = await availableModels()
         if !models.isEmpty, !models.contains(model) { throw LMError.modelMissing(model) }
+        await ensureLoaded(model, status: status)
 
         var messages: [[String: Any]] = [
             ["role": "system", "content": systemPrompt + "\n" + context],
@@ -108,6 +123,7 @@ enum LMStudioTier {
                     else if let o = argsRaw as? [String: Any] { args = o }
                     status("Running \(name)…")
                     let result = await execute(name, args)
+                    if result == Agent.cancelledMarker { return "Cancelled." }
                     messages.append(["role": "tool", "tool_call_id": call["id"] as? String ?? UUID().uuidString, "content": result])
                 }
                 continue

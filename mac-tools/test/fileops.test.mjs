@@ -68,3 +68,31 @@ test("quitApplication rejects unsafe names without running osascript", async () 
   const r = await s.tool("quitApplication", { name: 'Finder" to quit\nsay "x' }).catch((e) => ({ isError: true, text: e.message }));
   assert.ok(r.isError);
 });
+
+// --- review fix pass ---
+test("mutating tools refuse symlinks (act on the link path the user sees, never the target)", async () => {
+  await fs.mkdir(path.join(SANDBOX, "real-target"), { recursive: true });
+  await fs.symlink(path.join(SANDBOX, "real-target"), path.join(SANDBOX, "link"));
+  const mv = await s.tool("moveItems", { paths: [path.join(SANDBOX, "link")], destinationFolder: path.join(SANDBOX, "dest") });
+  assert.match(mv.text, /^0\/1 moved[\s\S]*symlink/);
+  assert.ok(await exists(path.join(SANDBOX, "real-target")));
+  const tr = await s.tool("trashItems", { paths: [path.join(SANDBOX, "link")] });
+  assert.ok(tr.isError && /symlink/.test(tr.text));
+  const rn = await s.tool("renameItem", { path: path.join(SANDBOX, "link"), newName: "link2" });
+  assert.ok(rn.isError && /symlink/.test(rn.text));
+});
+test("mutating tools refuse an allowed root itself (sandboxed roots — never real folders)", async () => {
+  // A dedicated server whose ONLY allowed root is a throwaway folder: if the refusal ever regresses,
+  // the worst case is trashing this sandbox, never the user's real folders.
+  const ROOT = path.join(SANDBOX, "fake-root");
+  await fs.mkdir(path.join(ROOT, "dest"), { recursive: true });
+  const s2 = startServer({ MACAGENT_ALLOWED_ROOTS: ROOT });
+  try {
+    await s2.init();
+    const r = await s2.tool("trashItems", { paths: [ROOT] });
+    assert.ok(r.isError && /root/.test(r.text), r.text);
+    const m = await s2.tool("moveItems", { paths: [ROOT], destinationFolder: path.join(ROOT, "dest") });
+    assert.match(m.text, /^0\/1 moved[\s\S]*root/);
+    assert.ok(await exists(ROOT));
+  } finally { s2.close(); }
+});

@@ -38,22 +38,27 @@ final class Agent {
     // MARK: Entry
 
     /// Phrases the 3B router cannot serve with one tool; they skip straight to tier 2.
-    static let complexMarkers = [" and then ", " and which", "which of", " older than ", " newer than ", " larger than ", " bigger than ",
-                                 " smaller than ", "duplicate", "clean up", "cleanup", "organize", "organise", "compare", "how many",
-                                 "count ", "why ", "explain", "summarize", "summarise", "what does", "total size", "each of"]
+    static let complexMarkers = [" and then ", " and which ", " which of ", " older than ", " newer than ", " larger than ", " bigger than ",
+                                 " smaller than ", " duplicate", " clean up ", " cleanup ", " organize ", " organise ", " compare ", " how many ",
+                                 " count ", " why ", " explain ", " summarize ", " summarise ", " what does ", " total size ", " each of "]
+    static let notUnderstood = "I didn't understand that. Try: open <app>, find <files>, open <project> in <editor>, quit <app>, or ask about memory/disk. Prefix with “agent:” to force the larger model."
+    static let cancelledMarker = "[[cancelled]]"
 
     func run(_ query: String, approver: Approver, status: @escaping (String) -> Void, forceTier: Int? = nil) async -> AgentOutput {
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        var q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         var out = AgentOutput()
-        guard !q.isEmpty else { return out }
+        var forceTier = forceTier
+        if q.lowercased().hasPrefix("agent:") { q = String(q.dropFirst(6)).trimmingCharacters(in: .whitespaces); forceTier = 2 }
+        guard !q.isEmpty, !Memory.normalize(q).isEmpty else { out.answer = Self.notUnderstood; return out }
+
+        if let macro = macro(for: q) {
+            return await runMacro(macro, approver: approver, status: status)
+        }
+
         let lower = " " + q.lowercased() + " "
         let looksComplex = Self.complexMarkers.contains { lower.contains($0) }
         if forceTier == 2 || (looksComplex && forceTier == nil) {
             return finish(await tier2(q, approver: approver, status: status, out: out), query: q)
-        }
-
-        if let macro = macro(for: q) {
-            return await runMacro(macro, approver: approver, status: status)
         }
 
         if let cached = memory?.cacheLookup(q), let args = Self.parseArgs(cached.argsJSON) {
@@ -72,12 +77,12 @@ final class Agent {
             status("Understanding…")
             if let cmd = try? await FoundationTier.route(q, context: await routingContext()) {
                 let confident = cmd.confidence >= Settings.confidenceThreshold
-                if cmd.tool == .unknown, confident {
+                if cmd.tool == .unknown {
                     out.tier = 1
-                    out.answer = "That doesn't look like a request for this Mac. Try: open <app>, find <files>, open <project> in <editor>, quit <app>, or ask about memory/disk."
+                    out.answer = Self.notUnderstood
                     return out
                 }
-                if confident, cmd.tool != .complex, cmd.tool != .unknown {
+                if confident, cmd.tool != .complex {
                     out.tier = 1
                     if let handled = await handle(cmd, query: q, approver: approver, status: status, out: out) {
                         return finish(handled, query: q)
@@ -122,7 +127,7 @@ final class Agent {
             let resolver = await self.resolver()
             let candidates = resolver.resolve(term, memory: memory)
             let scores = candidates.map { ProjectResolver.score(term: term, name: $0.name) }
-            let strong = candidates.count == 1 || (scores.count > 1 && (scores[0] >= 80 && scores[1] < scores[0])) || memory?.alias(term) != nil
+            let strong = (candidates.count == 1 && scores[0] >= 60) || (scores.count > 1 && scores[0] >= 80 && scores[1] < scores[0]) || memory?.alias(term) != nil
             if let first = candidates.first, strong {
                 args["path"] = first.path
                 return await single(tool, args, query: query, out: out, approver: approver, status: status) {
@@ -226,7 +231,7 @@ final class Agent {
             try await LMStudioTier.run(query: q, model: model, tools: tools, context: context, status: status) { name, args in
                 let r = await self.execute(name, args, approver: approver, status: status)
                 results.append(r)
-                return r.cancelled ? "The user cancelled this action. Stop and report." : (r.ok ? r.text : "Error: \(r.text)")
+                return r.cancelled ? Self.cancelledMarker : (r.ok ? r.text : "Error: \(r.text)")
             }
         }
         var model = gate.useSmall ? Settings.fallbackModel : Settings.model

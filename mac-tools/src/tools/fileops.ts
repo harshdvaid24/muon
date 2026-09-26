@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { defineTool } from "../define.js";
 import { run } from "../run.js";
-import { resolveAllowed, display } from "../paths.js";
+import { resolveAllowed, display, expandHome, ALLOWED_ROOTS } from "../paths.js";
 
 const MAX_OPS = 50;
 const APP_NAME = /^[\w .+&()'-]{1,64}$/;
@@ -13,6 +13,16 @@ const MUT = { readOnlyHint: false, destructiveHint: false, idempotentHint: false
 const pathList = z.array(z.string().min(1)).min(1).max(MAX_OPS).describe(`Paths (max ${MAX_OPS})`);
 
 const exists = async (p: string) => !!(await fsp.lstat(p).catch(() => null));
+
+/** Mutations act on what the user sees: refuse symlinks (target would be affected) and allowed roots themselves. */
+async function resolveMutable(p: string): Promise<string> {
+  const lexical = path.resolve(expandHome(p.trim()));
+  const st = await fsp.lstat(lexical).catch(() => null);
+  if (st?.isSymbolicLink()) throw new Error(`refusing to modify a symlink: ${display(lexical)}`);
+  const real = await resolveAllowed(p, { mustExist: true });
+  if (ALLOWED_ROOTS.includes(real)) throw new Error(`refusing to modify an allowed root folder: ${display(real)}`);
+  return real;
+}
 
 async function resolveFolder(p: string): Promise<string> {
   const real = await resolveAllowed(p, { mustExist: true });
@@ -26,7 +36,7 @@ async function batch(paths: string[], dest: string, op: (src: string, dst: strin
   let done = 0;
   for (const p of paths) {
     try {
-      const src = await resolveAllowed(p, { mustExist: true });
+      const src = await resolveMutable(p);
       const dst = path.join(folder, path.basename(src));
       if (src === dst) { lines.push(`skip ${display(src)}: already there`); continue; }
       if (await exists(dst)) { lines.push(`skip ${display(src)}: ${display(dst)} already exists`); continue; }
@@ -58,7 +68,7 @@ export function registerFileOps(server: McpServer): void {
     annotations: MUT,
     handler: async ({ path: p, newName }) => {
       if (newName.includes("/") || newName === "." || newName === "..") throw new Error("newName must be a plain name");
-      const src = await resolveAllowed(p, { mustExist: true });
+      const src = await resolveMutable(p);
       const dst = await resolveAllowed(path.join(path.dirname(src), newName));
       if (await exists(dst)) throw new Error(`${display(dst)} already exists`);
       await fsp.rename(src, dst);
@@ -82,7 +92,7 @@ export function registerFileOps(server: McpServer): void {
     input: { paths: pathList },
     annotations: MUT,
     handler: async ({ paths }) => {
-      const reals = await Promise.all(paths.map((p) => resolveAllowed(p, { mustExist: true })));
+      const reals = await Promise.all(paths.map(resolveMutable));
       const res = await run("trash", reals);
       if (res.code !== 0) throw new Error(res.stderr.trim() || "trash failed");
       return `Moved ${reals.length} item(s) to Trash:\n` + reals.map(display).join("\n");

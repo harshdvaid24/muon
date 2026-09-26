@@ -52,13 +52,14 @@ enum Permission {
         if !list.contains(key) { list.append(key); Settings.d.set(list, forKey: Settings.Key.alwaysAllow) }
     }
 
+    /// The folder an "always allow" grant covers: the parent shared by every source path, or nil (→ always ask).
     static func folder(in args: [String: Any]) -> String? {
-        let candidates: [String?] = [args["destinationFolder"] as? String, args["path"] as? String, (args["paths"] as? [String])?.first]
-        guard let p = candidates.compactMap({ $0 }).first else { return nil }
-        let expanded = Settings.expand(p)
-        var isDir: ObjCBool = false
-        if FileManager.default.fileExists(atPath: expanded, isDirectory: &isDir), isDir.boolValue, args["destinationFolder"] != nil { return expanded }
-        return (expanded as NSString).deletingLastPathComponent
+        if let paths = args["paths"] as? [String], !paths.isEmpty {
+            let parents = Set(paths.map { (Settings.expand($0) as NSString).deletingLastPathComponent })
+            return parents.count == 1 ? parents.first : nil
+        }
+        if let p = args["path"] as? String { return (Settings.expand(p) as NSString).deletingLastPathComponent }
+        return nil
     }
 
     static func describe(tool: String, args: [String: Any]) -> (title: String, detail: String) {

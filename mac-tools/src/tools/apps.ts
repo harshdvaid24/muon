@@ -1,3 +1,5 @@
+import fsp from "node:fs/promises";
+import path from "node:path";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { defineTool } from "../define.js";
@@ -5,6 +7,17 @@ import { run } from "../run.js";
 import { resolveAllowed, display } from "../paths.js";
 
 const APP_NAME = /^[\w .+&()'-]{1,64}$/;
+const TERMINALS = /^(terminal|iterm2?|warp|alacritty|kitty|ghostty|wezterm|hyper|script editor|automator)$/i;
+const EXEC_EXT = new Set([".command", ".tool", ".pkg", ".mpkg", ".jar", ".workflow", ".terminal", ".scpt", ".applescript", ".dmg"]);
+
+/** openPath must never execute anything: no app bundles, no executables, no terminal targets. */
+async function assertOpenable(real: string, app?: string): Promise<void> {
+  if (app && TERMINALS.test(app)) throw new Error(`refusing to open files with a terminal app (${app})`);
+  const st = await fsp.stat(real);
+  if (real.endsWith(".app") || /\.app\//.test(real)) throw new Error(`refusing to open an app bundle: ${display(real)}`);
+  if (EXEC_EXT.has(path.extname(real).toLowerCase())) throw new Error(`refusing to open an executable file: ${display(real)}`);
+  if (st.isFile() && (st.mode & 0o111)) throw new Error(`refusing to open an executable file: ${display(real)}`);
+}
 const SAFE = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
 
 export function registerAppTools(server: McpServer): void {
@@ -43,11 +56,12 @@ export function registerAppTools(server: McpServer): void {
   });
 
   defineTool(server, "openPath", {
-    description: "Open a file or folder with its default app, or with a named app (e.g. open a project folder in 'Visual Studio Code' or an .xcworkspace in Xcode).",
+    description: "Open a file or folder with its default app, or with a named app (e.g. open a project folder in 'Visual Studio Code' or an .xcworkspace in Xcode). Never runs executables, scripts or app bundles.",
     input: { path: z.string().min(1).describe("File or folder path"), app: z.string().regex(APP_NAME).optional().describe("Application to open it with") },
     annotations: SAFE,
     handler: async ({ path: p, app }) => {
       const real = await resolveAllowed(p, { mustExist: true });
+      await assertOpenable(real, app);
       const res = await run("open", app ? ["-a", app, real] : [real]);
       if (res.code !== 0) throw new Error(res.stderr.trim() || `could not open ${display(real)}`);
       return `Opened ${display(real)}${app ? ` in ${app}` : ""}.`;

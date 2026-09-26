@@ -39,11 +39,13 @@ final class MCPClient {
     var isRunning: Bool { process?.isRunning ?? false }
 
     func ensureStarted() async throws {
-        if isRunning { touch(); return }
-        if let starting { try await starting.value; return }
+        if isRunning, !tools.isEmpty { touch(); return }
+        lock.lock()
+        if let inFlight = starting { lock.unlock(); try await inFlight.value; return }
         let t = Task { try await start() }
         starting = t
-        defer { starting = nil }
+        lock.unlock()
+        defer { lock.lock(); starting = nil; lock.unlock() }
         try await t.value
     }
 
@@ -88,12 +90,18 @@ final class MCPClient {
         p.terminationHandler = { [weak self] _ in self?.stop() }
         try p.run()
         lock.lock(); process = p; stdinHandle = inPipe.fileHandleForWriting; buffer = Data(); lock.unlock()
-        _ = try await request("initialize", params: [
-            "protocolVersion": "2025-06-18", "capabilities": [:],
-            "clientInfo": ["name": "MacAgent", "version": "0.1.0"],
-        ], timeout: 15)
-        send(["jsonrpc": "2.0", "method": "notifications/initialized"])
-        let list = try await request("tools/list", timeout: 15)
+        let list: [String: Any]
+        do {
+            _ = try await request("initialize", params: [
+                "protocolVersion": "2025-06-18", "capabilities": [:],
+                "clientInfo": ["name": "MacAgent", "version": "0.1.0"],
+            ], timeout: 15)
+            send(["jsonrpc": "2.0", "method": "notifications/initialized"])
+            list = try await request("tools/list", timeout: 15)
+        } catch {
+            stop() // never keep a half-initialized server around: every call would default to confirm
+            throw error
+        }
         tools = (list["tools"] as? [[String: Any]] ?? []).map { t in
             let ann = t["annotations"] as? [String: Any] ?? [:]
             return Tool(name: t["name"] as? String ?? "", description: t["description"] as? String ?? "",
@@ -124,8 +132,10 @@ final class MCPClient {
     }
 
     private func send(_ obj: [String: Any]) {
-        guard let data = try? JSONSerialization.data(withJSONObject: obj), let h = stdinHandle else { return }
-        h.write(data + Data([0x0A]))
+        guard let data = try? JSONSerialization.data(withJSONObject: obj) else { return }
+        lock.lock(); let h = stdinHandle; lock.unlock()
+        guard let h else { return }
+        try? h.write(contentsOf: data + Data([0x0A]))
     }
 
     private func receive(_ data: Data) {

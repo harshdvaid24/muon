@@ -2,13 +2,10 @@ import Foundation
 import Testing
 @testable import MacAgent
 
-@Suite struct FoundationTierTests {
+@Suite(.enabled(if: FoundationTier.isAvailable, "Apple Intelligence on-device model unavailable")) struct FoundationTierTests {
     let ctx = RoutingContext(aliases: ["kathak → ~/Work/kathak"], apps: ["Xcode", "Visual Studio Code"], projects: ["kathak", "thandaai", "VaidyaApp", "MacAgent"])
 
-    func route(_ q: String) async throws -> Command? {
-        guard FoundationTier.isAvailable else { return nil }
-        return try await FoundationTier.route(q, context: ctx)
-    }
+    func route(_ q: String) async throws -> Command? { try await FoundationTier.route(q, context: ctx) }
 
     @Test func openApp() async throws {
         guard let c = try await route("open xcode") else { return }
@@ -45,6 +42,6 @@ import Testing
 
     @Test func gibberishIsUnknownOrLowConfidence() async throws {
         guard let c = try await route("  ???  ") else { return }
-        #expect(c.tool == .unknown || c.confidence < 0.6)
+        #expect(c.tool == .unknown)
     }
 }

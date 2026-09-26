@@ -7,6 +7,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Explicit entry point: without a MainMenu nib, NSApplicationMain would never instantiate the delegate.
     static func main() {
+        signal(SIGPIPE, SIG_IGN) // a dead tool-server pipe must never kill the app
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
