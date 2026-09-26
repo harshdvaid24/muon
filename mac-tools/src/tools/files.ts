@@ -138,8 +138,13 @@ export function registerFileTools(server: McpServer): void {
 async function projectType(dir: string): Promise<string> {
   const has = async (n: string) => !!(await fsp.stat(path.join(dir, n)).catch(() => null));
   if (await has("package.json")) {
-    if (await has("ios") || await has("android") || await has("app.json")) return "react-native";
-    if (await has("next.config.js") || await has("next.config.ts") || await has("next.config.mjs")) return "nextjs";
+    try {
+      const pkg = JSON.parse(await fsp.readFile(path.join(dir, "package.json"), "utf8"));
+      const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
+      if (deps["react-native"] || deps["expo"]) return "react-native";
+      if (deps["next"]) return "nextjs";
+      if (deps["react"]) return "react";
+    } catch { /* unreadable package.json */ }
     return "node";
   }
   const names = await fsp.readdir(dir).catch(() => [] as string[]);

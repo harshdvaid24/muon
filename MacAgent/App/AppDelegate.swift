@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     let palette = PanelController()
     private var hotKey: HotKey?
+    private var settingsWindow: NSWindow?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(handleGetURL(_:with:)),
@@ -76,6 +77,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         stopTools.isEnabled = MCPClient.shared.isRunning
         menu.addItem(stopTools)
         menu.addItem(.separator())
+        let macros = Agent.shared.memory?.macros() ?? []
+        if !macros.isEmpty {
+            let sub = NSMenu()
+            for m in macros {
+                let item = NSMenuItem(title: m.name, action: #selector(runMacro(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = m.name
+                sub.addItem(item)
+            }
+            let macrosItem = NSMenuItem(title: "Macros", action: nil, keyEquivalent: "")
+            macrosItem.submenu = sub
+            menu.addItem(macrosItem)
+        }
+        let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
+        menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit MacAgent", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
         statusItem.menu = menu
@@ -85,6 +103,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openPalette() { palette.show(anchor: nil) }
 
+    @objc private func runMacro(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String else { return }
+        palette.show(anchor: nil)
+        palette.model.query = name
+        palette.model.submit()
+    }
+
+    @objc private func openSettings() {
+        if settingsWindow == nil {
+            let w = NSWindow(contentViewController: NSHostingController(rootView: SettingsView()))
+            w.title = "MacAgent Settings"
+            w.styleMask = [.titled, .closable]
+            w.isReleasedWhenClosed = false
+            w.center()
+            settingsWindow = w
+        }
+        NSApp.activate()
+        settingsWindow?.makeKeyAndOrderFront(nil)
+    }
+
     // MARK: URL scheme  macagent://show  |  macagent://ask?q=...
 
     @objc private func handleGetURL(_ event: NSAppleEventDescriptor, with reply: NSAppleEventDescriptor) {
@@ -93,6 +131,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch url.host() {
         case "show":
             palette.show(anchor: nil)
+        case "settings":
+            openSettings()
         case "ask":
             let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "q" }?.value ?? ""
             palette.show(anchor: nil)

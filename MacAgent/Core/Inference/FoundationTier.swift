@@ -49,6 +49,9 @@ enum FoundationTier {
         - unknown: not a request for this assistant, or unintelligible.
 
         Rules: one tool only; anything with "and", "then", conditions, or age/size filters is complex. Keep target in the user's words. Never invent paths.
+        Examples: "what is inside ~/Downloads" → listDirectory target "~/Downloads"; "show my projects" → listProjects;
+        "open kathak in xcode" → openProject target "kathak" app "Xcode"; "find pdfs about tax" → searchFiles query "pdf tax";
+        "where is package.json in thandaai" → findFiles target "package.json"; "is my mac hot" → getSystemStats.
         """
         if !c.projects.isEmpty { s += "\nKnown projects: \(c.projects.joined(separator: ", "))." }
         if !c.aliases.isEmpty { s += "\nLearned names: \(c.aliases.joined(separator: ", "))." }
