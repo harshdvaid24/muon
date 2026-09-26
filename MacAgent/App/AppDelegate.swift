@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let delegate = AppDelegate()
         app.delegate = delegate
         app.setActivationPolicy(.accessory)
+        _ = CLI.runIfRequested()
         app.run()
     }
 
@@ -24,9 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil { return }
-        installDemoHandler() // TEMP: replaced by Agent wiring in Task 8
-        NSLog("MacAgent: didFinishLaunching, status button=%@", String(describing: statusItem?.button))
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil || CLI.active { return }
+        wireAgent()
         setupStatusItem()
         hotKey = HotKey(keyCode: 49 /* space */, modifiers: HotKey.controlOption) { [weak self] in
             self?.palette.toggle(anchor: nil)
@@ -58,9 +58,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showMenu() {
         let menu = NSMenu()
-        let ask = NSMenuItem(title: "Ask MacAgent…", action: #selector(openPalette), keyEquivalent: "")
+        let ask = NSMenuItem(title: "Ask MacAgent…   ⌃⌥Space", action: #selector(openPalette), keyEquivalent: "")
         ask.target = self
         menu.addItem(ask)
+        menu.addItem(.separator())
+        let modelItem = NSMenuItem(title: "Model: checking…", action: nil, keyEquivalent: "")
+        menu.addItem(modelItem)
+        Task { @MainActor in
+            let loaded = await LMStudioTier.loadedModels()
+            modelItem.title = loaded.isEmpty ? "Model: not loaded (0 GB)" : "Model loaded: \(loaded.joined(separator: ", "))"
+        }
+        let unload = NSMenuItem(title: "Unload Model Now", action: #selector(unloadModel), keyEquivalent: "")
+        unload.target = self
+        menu.addItem(unload)
+        let stopTools = NSMenuItem(title: MCPClient.shared.isRunning ? "Stop Tool Server (running)" : "Tool Server: idle", action: #selector(stopToolServer), keyEquivalent: "")
+        stopTools.target = self
+        stopTools.isEnabled = MCPClient.shared.isRunning
+        menu.addItem(stopTools)
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit MacAgent", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
@@ -74,7 +88,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: URL scheme  macagent://show  |  macagent://ask?q=...
 
     @objc private func handleGetURL(_ event: NSAppleEventDescriptor, with reply: NSAppleEventDescriptor) {
-        NSLog("MacAgent: GetURL %@", event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue ?? "nil")
         guard let raw = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue,
               let url = URL(string: raw) else { return }
         switch url.host() {
@@ -90,26 +103,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // TEMP demo wiring for visual verification of Task 5. Removed in Task 8.
-    private func installDemoHandler() {
+    @objc private func unloadModel() { LMStudioTier.unloadAll() }
+    @objc private func stopToolServer() { MCPClient.shared.stop() }
+
+    // MARK: Agent wiring
+
+    private func wireAgent() {
         let m = palette.model
-        m.handler = { q in
-            m.status = "Thinking…"
-            try? await Task.sleep(for: .milliseconds(400))
-            m.status = nil
-            if q.lowercased().hasPrefix("demo confirm") {
-                m.pending = .init(title: "Move 3 screenshots to ~/Downloads/Archive",
-                                  detail: "Screenshot 2026-09-01.png\nScreenshot 2026-09-02.png\nScreenshot 2026-09-03.png",
-                                  destructive: false, allowAlwaysLabel: "Always allow in Downloads") { d in
-                    m.pending = nil; m.answer = "Decision: \(d)"
+        m.handler = { [weak self] q in await self?.handle(q) }
+    }
+
+    private func handle(_ q: String) async {
+        let m = palette.model
+        let lower = q.lowercased()
+        if lower.hasPrefix("save macro ") {
+            m.answer = Agent.shared.saveMacro(named: String(q.dropFirst(11)).trimmingCharacters(in: .whitespaces))
+            return
+        }
+        let out = await Agent.shared.run(q, approver: palette) { s in Task { @MainActor in m.status = s } }
+        m.status = nil
+        m.answer = out.cancelled ? "Cancelled." : out.answer
+        if let note = out.note { m.answer = (m.answer.map { $0 + "\n\n" } ?? "") + note }
+        m.rows = out.suggestions.map { s in
+            PaletteModel.Row(icon: s.icon, title: s.title, subtitle: s.subtitle) { [weak self] in
+                guard let self else { return }
+                Task { @MainActor in
+                    m.isBusy = true
+                    let r = await Agent.shared.runSuggestion(s, approver: self.palette) { st in Task { @MainActor in m.status = st } }
+                    m.status = nil
+                    m.isBusy = false
+                    m.answer = r.text
+                    if r.ok, Self.closesPalette(r.tool) { self.dismissSoon() }
                 }
-                return
             }
-            m.rows = [
-                .init(icon: "folder", title: "Open ~/Work/kathak in Visual Studio Code", subtitle: "openPath", action: { m.answer = "opened" }),
-                .init(icon: "hammer", title: "Open ~/Work/kathak in Xcode", subtitle: nil, action: nil),
-                .init(icon: "magnifyingglass", title: "Reveal ~/Work/kathak in Finder", subtitle: nil, action: nil),
-            ]
+        }
+        m.selection = 0
+        if !out.cancelled, out.suggestions.isEmpty, !out.results.isEmpty, out.results.allSatisfy(\.ok),
+           out.results.contains(where: { Self.closesPalette($0.tool) }) {
+            dismissSoon()
+        }
+    }
+
+    private static func closesPalette(_ tool: String) -> Bool {
+        ["openApplication", "openPath", "revealInFinder", "quitApplication"].contains(tool)
+    }
+
+    private func dismissSoon() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(700))
+            palette.hide()
+            palette.model.reset()
         }
     }
 }

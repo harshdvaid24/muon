@@ -52,7 +52,6 @@ final class PanelController: NSObject, NSWindowDelegate {
         }
         x = min(max(x, vf.minX + 8), vf.maxX - Self.width - 8)
         topLeft = NSPoint(x: x, y: y)
-        NSLog("MacAgent: show at %@ visible=%d", NSStringFromPoint(topLeft), panel.isVisible ? 1 : 0)
         panel.setFrameTopLeftPoint(topLeft)
         NSApp.activate()
         panel.makeKeyAndOrderFront(nil)
@@ -70,5 +69,26 @@ final class PanelController: NSObject, NSWindowDelegate {
         panel.setFrameTopLeftPoint(topLeft)
     }
 
-    func windowDidResignKey(_ notification: Notification) { NSLog("MacAgent: resignKey → hide"); hide() }
+    func windowDidResignKey(_ notification: Notification) { hide() }
+}
+
+extension PanelController: Approver {
+    func approve(_ a: PendingAction) async -> ApprovalDecision {
+        if a.destructive {
+            let alert = NSAlert()
+            alert.alertStyle = .critical
+            alert.messageText = a.title
+            alert.informativeText = a.detail
+            alert.addButton(withTitle: "Proceed")
+            alert.addButton(withTitle: "Cancel")
+            return alert.runModal() == .alertFirstButtonReturn ? .allow : .cancel
+        }
+        return await withCheckedContinuation { cont in
+            model.pending = PaletteModel.Pending(title: a.title, detail: a.detail, destructive: false, allowAlwaysLabel: a.alwaysLabel) { [weak self] d in
+                self?.model.pending = nil
+                cont.resume(returning: d)
+            }
+            if !panel.isVisible { show(anchor: nil) }
+        }
+    }
 }

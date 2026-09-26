@@ -18,11 +18,13 @@ export function registerAppTools(server: McpServer): void {
       for (const line of res.stdout.split("\n")) {
         const m = line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/);
         if (!m) continue;
-        const app = m[3].match(/\/([^/]+)\.app\/Contents\/MacOS\//);
-        if (!app) continue;
-        const e = byApp.get(app[1]) ?? { mb: 0, pids: [] };
+        if (!m[3].includes(".app/Contents/MacOS/")) continue;
+        const outer = m[3].split("/").find((seg) => seg.endsWith(".app"));
+        if (!outer) continue;
+        const name = outer.slice(0, -4);
+        const e = byApp.get(name) ?? { mb: 0, pids: [] };
         e.mb += Number(m[2]) / 1024; e.pids.push(Number(m[1]));
-        byApp.set(app[1], e);
+        byApp.set(name, e);
       }
       const rows = [...byApp].sort((a, b) => b[1].mb - a[1].mb).slice(0, 30);
       return rows.map(([n, e]) => `${e.mb.toFixed(0).padStart(6)} MB  ${n}  (pid ${e.pids[0]}${e.pids.length > 1 ? ` +${e.pids.length - 1}` : ""})`).join("\n");

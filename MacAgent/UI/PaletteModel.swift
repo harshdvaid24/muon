@@ -10,7 +10,7 @@ final class PaletteModel: ObservableObject {
         var action: (() -> Void)?
     }
 
-    enum Decision { case allow, allowAlways, cancel }
+    typealias Decision = ApprovalDecision
 
     struct Pending: Identifiable {
         let id = UUID()
