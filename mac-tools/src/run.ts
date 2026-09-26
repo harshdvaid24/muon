@@ -2,7 +2,7 @@
 import { execFile } from "node:child_process";
 
 export const ALLOWED_BINS = new Set([
-  "open", "mdfind", "rg", "ps", "pgrep", "osascript", "du", "df", "xcrun", "vm_stat", "pmset", "sysctl",
+  "open", "mdfind", "rg", "ps", "pgrep", "osascript", "du", "df", "xcrun", "vm_stat", "pmset", "sysctl", "trash",
 ]);
 
 export interface RunResult { stdout: string; stderr: string; code: number }

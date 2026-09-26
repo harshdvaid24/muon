@@ -37,10 +37,17 @@ export async function resolveAllowed(input: string, opts: { mustExist?: boolean 
   } catch (e) {
     const code = (e as NodeJS.ErrnoException).code;
     if (code !== "ENOENT" || opts.mustExist) throw new PathError(`path does not exist: ${abs}`, input);
-    let parentReal: string;
-    try { parentReal = await fs.realpath(path.dirname(abs)); }
-    catch { throw new PathError(`parent folder does not exist: ${path.dirname(abs)}`, input); }
-    real = path.join(parentReal, path.basename(abs));
+    // New path: realpath the nearest existing ancestor, re-append the missing tail.
+    let base = abs;
+    const tail: string[] = [];
+    while (true) {
+      const parent = path.dirname(base);
+      if (parent === base) throw new PathError(`no existing parent for ${abs}`, input);
+      tail.unshift(path.basename(base));
+      base = parent;
+      try { base = await fs.realpath(base); break; } catch { /* keep walking up */ }
+    }
+    real = path.join(base, ...tail);
   }
   if (DENIED_ROOTS.some((r) => under(real, r))) throw new PathError(`path is protected: ${display(real)}`, input);
   if (!ALLOWED_ROOTS.some((r) => under(real, r))) {

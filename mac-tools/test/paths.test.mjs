@@ -44,3 +44,7 @@ test("non-existent path with mustExist is rejected", async () => {
 });
 test("empty / whitespace path is rejected", async () => { await rejects("   "); });
 test("path outside all roots (~/Movies) is rejected", async () => { await rejects("~/Movies"); });
+test("new nested path (two missing levels) resolves via nearest existing ancestor", async () => {
+  assert.equal(await resolveAllowed(path.join(SANDBOX, "new/deep/x.txt")), path.join(SANDBOX, "new/deep/x.txt"));
+});
+test("new nested path under denied root is still rejected", async () => { await rejects("~/Library/new/deep/x.txt"); });

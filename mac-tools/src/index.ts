@@ -6,6 +6,7 @@ import { rotateAudit } from "./audit.js";
 import { registerFileTools } from "./tools/files.js";
 import { registerAppTools } from "./tools/apps.js";
 import { registerSystemTools } from "./tools/system.js";
+import { registerFileOps } from "./tools/fileops.js";
 
 export const server = new McpServer({ name: "mac-tools", version: "0.1.0" });
 
@@ -14,6 +15,7 @@ server.registerTool("ping", { description: "Health check.", annotations: { readO
 registerFileTools(server);
 registerAppTools(server);
 registerSystemTools(server);
+registerFileOps(server);
 
 process.stdin.on("end", () => process.exit(0));
 void rotateAudit();
