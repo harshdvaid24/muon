@@ -1,0 +1,62 @@
+import { test, before, after } from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { startServer } from "./helpers.mjs";
+
+const SANDBOX = path.join(os.homedir(), "Work/MacAgent/.sandbox/tools");
+let s;
+before(async () => {
+  await fs.rm(SANDBOX, { recursive: true, force: true });
+  await fs.mkdir(path.join(SANDBOX, "sub"), { recursive: true });
+  await fs.writeFile(path.join(SANDBOX, "hello.txt"), "hello world\n");
+  await fs.writeFile(path.join(SANDBOX, "bin.dat"), Buffer.from([0, 1, 2, 3]));
+  s = startServer(); await s.init();
+});
+after(async () => { s.close(); await fs.rm(SANDBOX, { recursive: true, force: true }); });
+
+test("all phase-1 tools registered with annotations", async () => {
+  const list = await s.call("tools/list");
+  const by = Object.fromEntries(list.result.tools.map((t) => [t.name, t]));
+  for (const n of ["searchFiles", "findFiles", "searchCode", "readFile", "listDirectory", "listProjects", "listRunningApps", "getSystemStats"])
+    assert.equal(by[n]?.annotations?.readOnlyHint, true, `${n} readOnly`);
+  for (const n of ["openApplication", "openPath", "revealInFinder"]) {
+    assert.ok(by[n], n); assert.equal(by[n].annotations.readOnlyHint, false); assert.equal(by[n].annotations.destructiveHint, false);
+  }
+});
+test("readFile reads text, rejects binary and protected paths", async () => {
+  assert.equal((await s.tool("readFile", { path: path.join(SANDBOX, "hello.txt") })).text, "hello world\n");
+  const bin = await s.tool("readFile", { path: path.join(SANDBOX, "bin.dat") });
+  assert.ok(bin.isError && /binary/.test(bin.text));
+  const lib = await s.tool("readFile", { path: "~/Library/Preferences/.GlobalPreferences.plist" });
+  assert.ok(lib.isError && /protected/.test(lib.text));
+});
+test("listDirectory lists dirs first", async () => {
+  const r = await s.tool("listDirectory", { path: SANDBOX });
+  assert.match(r.text, /sub\/\nbin\.dat/);
+});
+test("searchCode finds text with rg", async () => {
+  const r = await s.tool("searchCode", { pattern: "hello world", scope: SANDBOX });
+  assert.match(r.text, /hello\.txt:1:hello world/);
+});
+test("findFiles finds by name (rg fallback works even before Spotlight indexes)", async () => {
+  const r = await s.tool("findFiles", { name: "hello", scope: SANDBOX });
+  assert.match(r.text, /hello\.txt/);
+});
+test("listProjects includes MacAgent", async () => {
+  const r = await s.tool("listProjects");
+  assert.match(r.text, /~\/Work\/MacAgent\t/);
+});
+test("getSystemStats and listRunningApps return data", async () => {
+  assert.match((await s.tool("getSystemStats")).text, /RAM: 24 GB total/);
+  assert.match((await s.tool("listRunningApps")).text, /MB\s+Finder/);
+});
+test("openPath outside roots is rejected without running open", async () => {
+  const r = await s.tool("openPath", { path: "/etc" });
+  assert.ok(r.isError && /protected/.test(r.text));
+});
+test("audit log written", async () => {
+  const log = await fs.readFile(path.join(os.homedir(), "Library/Application Support/MacAgent/audit.jsonl"), "utf8");
+  assert.ok(log.split("\n").some((l) => l.includes('"tool":"readFile"')));
+});
