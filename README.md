@@ -56,3 +56,10 @@ Try: `open kathak in vs code` · `find pdfs about invoices` · `which apps use t
 ```bash
 claude mcp add mac-tools -- node ~/Work/MacAgent/mac-tools/dist/index.js
 ```
+
+## Known limitations
+
+- LM Studio ignores `lms load --context-length` for the MLX Qwen3.5 models (API reports `loaded_context_length: 123648`). MLX grows the KV cache with actual tokens and the agent loop is bounded (≤ 8 steps, ≤ 20 results per tool), so memory stays near the weights (~3 GB for 4B, ~6 GB for 9B). To hard-cap it, set the model's Context Length in LM Studio → My Models → model settings.
+- Tier 1 needs Apple Intelligence enabled; without it every request goes to LM Studio.
+- `mac-tools` is run from the repo path (see Settings → Tool server); it is not bundled into the .app yet.
+- Hotkey is fixed at ⌃⌥Space (Settings shows it; not yet rebindable).
