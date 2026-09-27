@@ -281,7 +281,7 @@ Then turn on **Settings › Laya**. Everything works without both; they only add
 
 <p><img src="docs/media/needle_on.png" width="320" alt="Palette footer: Needle 3 · 58 ms"> <img src="docs/media/needle_off.png" width="320" alt="Palette footer: on-device · 2.5 s"></p>
 
-Nine requests, end to end from the command line: on-device 9/9 right; Needle 4 right, 4 wrong, 1 handed back. Turn it on in **Settings › Needle** to see it yourself; a fine-tune on your own requests is what would make it useful.
+Seventeen everyday requests, end to end from the command line, cache bypassed: on-device **16/17 right, median 1.9 s**; Needle first **8/17 right, median 0.6 s** (of the 14 it decided itself, 6 right, decision median 50 ms; 2 it handed back at low confidence were then answered right on-device). Turn it on in **Settings › Needle** to see it yourself; a fine-tune on your own requests is what would make it useful.
 
 ```bash
 python3 -m venv ~/.muon/needle && ~/.muon/needle/bin/pip install cactus-needle
