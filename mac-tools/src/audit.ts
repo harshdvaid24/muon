@@ -4,7 +4,7 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import { HOME } from "./paths.js";
 
-export const DATA_DIR = path.join(HOME, "Library/Application Support/MacAgent");
+export const DATA_DIR = path.join(HOME, "Library/Application Support/Muon");
 export const AUDIT_FILE = path.join(DATA_DIR, "audit.jsonl");
 const KEEP_DAYS = 30;
 

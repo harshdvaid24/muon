@@ -1,4 +1,4 @@
-# MacAgent — Design Spec (2026-09-27)
+# Muon — Design Spec (2026-09-27)
 
 ## Goal
 Local, offline AI agent for MacBook Air M4 (24 GB, macOS 26.6) that searches/manages files, opens/quits apps, runs machine tasks, learns user habits, and never raises idle load. Native Liquid Glass UI, menu bar resident, hotkey + Spotlight/Shortcuts entry points.
@@ -16,10 +16,10 @@ Local, offline AI agent for MacBook Air M4 (24 GB, macOS 26.6) that searches/man
 
 ## Architecture
 ```
-hotkey / menu bar / Spotlight (App Intents) / macagent:// URL
+hotkey / menu bar / Spotlight (App Intents) / wisp:// URL
         │
         ▼
-┌──────────────────────── MacAgent.app (Swift, ~40 MB idle) ────────────────────────┐
+┌──────────────────────── Muon.app (Swift, ~40 MB idle) ────────────────────────┐
 │ Palette UI (glass)  ·  Confirm UI  ·  Settings  ·  Audit viewer                    │
 │ Tier 0  SQLite memory: intent cache, aliases, usage frecency, macros (no model)    │
 │ Tier 1  Apple Foundation Models (on-device, OS-managed) → guided `Command` struct   │
@@ -45,7 +45,7 @@ hotkey / menu bar / Spotlight (App Intents) / macagent:// URL
 Tier 2 only loads when ResourceGate passes: thermalState ∈ {nominal, fair}, memory pressure normal, not Low Power Mode, AC or battery > 25 %, no `xcodebuild`/`gradle`/`ffmpeg` running. Otherwise stay at tier 1 and say why.
 
 ## Self-learning (bounded, load-reducing)
-SQLite at `~/Library/Application Support/MacAgent/memory.db`.
+SQLite at `~/Library/Application Support/Muon/memory.db`.
 - `intent_cache(key PK, tool, args_json, hits, last_used, ok)` — key = lowercased, whitespace-collapsed, punctuation-stripped query. Hit executes directly (still confirms non-auto tools). Invalidated on failure.
 - `aliases(term PK, path, hits, last_used)` — learned when a project/path resolution succeeds ("kathak" → ~/Work/kathak).
 - `usage(kind, name PK(kind,name), hits, last_used)` — app/path frecency for ranking + disambiguation; `kind='seq'` rows count repeated 2-step sequences.
@@ -76,20 +76,20 @@ normalize → resolve symlinks (realpath, or parent realpath for new paths) → 
 
 ## Entry points
 - Hotkey ⌃⌥Space (Carbon `RegisterEventHotKey`, no Accessibility permission).
-- `macagent://ask?q=...` URL scheme (scripts, Shortcuts, Raycast).
-- App Intents: `AskMacAgent(request)`, `OpenProject(project: ProjectEntity)`, `RunMacro(macro: MacroEntity)`; `AppShortcutsProvider` phrases → Spotlight (macOS 26), Shortcuts.app, Siri.
-- CLI debug: `MacAgent.app/Contents/MacOS/MacAgent --query "..." [--yes]` prints JSON, exits.
+- `wisp://ask?q=...` URL scheme (scripts, Shortcuts, Raycast).
+- App Intents: `AskMuon(request)`, `OpenProject(project: ProjectEntity)`, `RunMacro(macro: MacroEntity)`; `AppShortcutsProvider` phrases → Spotlight (macOS 26), Shortcuts.app, Siri.
+- CLI debug: `Muon.app/Contents/MacOS/Muon --query "..." [--yes]` prints JSON, exits.
 
 ## Audit
-`~/Library/Application Support/MacAgent/audit.jsonl`: `{ts, tool, args (paths only), result, tier, ms}`. Rotate > 30 days on launch. Never file contents.
+`~/Library/Application Support/Muon/audit.jsonl`: `{ts, tool, args (paths only), result, tier, ms}`. Rotate > 30 days on launch. Never file contents.
 
 ## Startup
-Login item: MacAgent.app only. LM Studio started lazily (`lms server start`) on first tier-2 need. Node spawned on first tool call, exits after 5 min idle. Idle = 1 process.
+Login item: Muon.app only. LM Studio started lazily (`lms server start`) on first tier-2 need. Node spawned on first tool call, exits after 5 min idle. Idle = 1 process.
 
 ## Non-goals
 Permanent delete, package install, GUI/screen automation, cloud models, fine-tuning, background indexing.
 
 ## Success metrics
-- Idle RSS of MacAgent < 60 MB, 0 timers.
+- Idle RSS of Muon < 60 MB, 0 timers.
 - ≥ 70 % of a 20-command fixture resolved at tier 0/1 after one week of use.
 - Path policy tests: `..`, symlink escape, denied roots all rejected.

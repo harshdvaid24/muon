@@ -13,7 +13,7 @@ export function expandHome(p: string): string {
 }
 
 const DEFAULT_ALLOWED = ["~/Projects", "~/Work", "~/Downloads", "~/Documents", "~/Desktop"];
-const envRoots = process.env.MACAGENT_ALLOWED_ROOTS;
+const envRoots = process.env.MUON_ALLOWED_ROOTS;
 export const ALLOWED_ROOTS: string[] = (envRoots ? envRoots.split(":").filter(Boolean) : DEFAULT_ALLOWED)
   .map((p) => path.resolve(expandHome(p)));
 

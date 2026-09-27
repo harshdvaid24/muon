@@ -1,7 +1,7 @@
 {
   "name": "mac-tools",
   "version": "0.1.0",
-  "description": "MacAgent MCP tool server: typed, path-policed macOS tools (no shell).",
+  "description": "Muon's MCP tool server: typed, path-policed macOS tools (files, apps, menu commands, web search) with no shell access.",
   "type": "module",
   "bin": {
     "mac-tools": "dist/index.js"
@@ -19,5 +19,10 @@
   "devDependencies": {
     "@types/node": "^26.6.3",
     "typescript": "^7.0.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/harshdvaid24/muon.git"
+  },
+  "author": "Harsh Vaid"
 }

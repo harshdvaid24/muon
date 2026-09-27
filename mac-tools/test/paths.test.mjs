@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 const HOME = os.homedir();
-const SANDBOX = path.join(HOME, "Work/MacAgent/.sandbox/paths");
+const SANDBOX = path.join(HOME, "Work/Muon/.sandbox/paths");
 let resolveAllowed, PathError;
 
 before(async () => {
@@ -23,7 +23,7 @@ test("existing file inside allowed root resolves to real path", async () => {
   assert.equal(await resolveAllowed(path.join(SANDBOX, "a.txt")), path.join(SANDBOX, "a.txt"));
 });
 test("tilde expansion works", async () => {
-  assert.equal(await resolveAllowed("~/Work/MacAgent/.sandbox/paths/a.txt"), path.join(SANDBOX, "a.txt"));
+  assert.equal(await resolveAllowed("~/Work/Muon/.sandbox/paths/a.txt"), path.join(SANDBOX, "a.txt"));
 });
 test("allowed root itself is allowed", async () => {
   assert.equal(await resolveAllowed("~/Work"), path.join(HOME, "Work"));

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// mac-tools: MCP server exposing typed, path-policed macOS tools for MacAgent.
+// mac-tools: MCP server exposing typed, path-policed macOS tools for Muon.
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { rotateAudit } from "./audit.js";

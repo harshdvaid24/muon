@@ -1,4 +1,4 @@
-name: MacAgent
+name: Muon
 options:
   bundleIdPrefix: com.harshvaid
   deploymentTarget:
@@ -14,56 +14,57 @@ settings:
     ENABLE_HARDENED_RUNTIME: YES
     ENABLE_USER_SCRIPT_SANDBOXING: NO
 targets:
-  MacAgent:
+  Muon:
     type: application
     platform: macOS
     sources:
-      - path: MacAgent
+      - path: Muon
     info:
-      path: MacAgent/Info.plist
+      path: Muon/Info.plist
       properties:
-        CFBundleName: MacAgent
-        CFBundleDisplayName: MacAgent
+        CFBundleName: Muon
+        CFBundleDisplayName: Muon
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         LSUIElement: true
         LSMinimumSystemVersion: "26.0"
         NSPrincipalClass: NSApplication
         CFBundleURLTypes:
-          - CFBundleURLName: com.harshvaid.MacAgent
-            CFBundleURLSchemes: [macagent]
-        NSAppleEventsUsageDescription: MacAgent asks apps to quit gracefully when you request it.
+          - CFBundleURLName: com.harshvaid.Muon
+            CFBundleURLSchemes: [wisp]
+        NSAppleEventsUsageDescription: Muon asks apps to quit and runs menu commands you request.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
     entitlements:
-      path: MacAgent/MacAgent.entitlements
+      path: Muon/Muon.entitlements
       properties:
         com.apple.security.app-sandbox: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.harshvaid.MacAgent
+        PRODUCT_BUNDLE_IDENTIFIER: com.harshvaid.Muon
         GENERATE_INFOPLIST_FILE: NO
-  MacAgentTests:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  MuonTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: MacAgentTests
+      - path: MuonTests
     dependencies:
-      - target: MacAgent
+      - target: Muon
     settings:
       base:
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/MacAgent.app/Contents/MacOS/MacAgent
-        BUNDLE_LOADER: $(TEST_HOST)
         GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: com.harshvaid.MacAgentTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.harshvaid.MuonTests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Muon.app/Contents/MacOS/Muon
+        BUNDLE_LOADER: $(TEST_HOST)
 schemes:
-  MacAgent:
+  Muon:
     build:
       targets:
-        MacAgent: all
-        MacAgentTests: [test]
+        Muon: all
+        MuonTests: [test]
     run:
       config: Debug
     test:
       config: Debug
-      targets: [MacAgentTests]
+      targets: [MuonTests]

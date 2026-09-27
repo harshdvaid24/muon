@@ -18,7 +18,7 @@ async function osa(script: string, timeoutMs = 12000): Promise<string> {
   if (res.code !== 0) {
     const msg = res.stderr.trim();
     if (/-1743|not allowed|assistive|accessibility/i.test(msg)) {
-      throw new Error("Accessibility permission is required. Grant MacAgent in System Settings › Privacy & Security › Accessibility, then try again.");
+      throw new Error("Accessibility permission is required. Grant Muon in System Settings › Privacy & Security › Accessibility, then try again.");
     }
     if (/-1728|-1719|doesn't understand|Can’t get|Can't get/i.test(msg)) throw new Error("that menu item was not found (check the exact titles with listMenus)");
     if (/-600|not running|-609/i.test(msg)) throw new Error("that application is not running");

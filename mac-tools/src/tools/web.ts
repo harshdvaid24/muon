@@ -15,7 +15,7 @@ export function registerWebTools(server: McpServer): void {
       const ia = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1&t=macagent`;
       let data: any;
       try {
-        const res = await fetch(ia, { signal: AbortSignal.timeout(8000), headers: { "User-Agent": "MacAgent/0.1" } });
+        const res = await fetch(ia, { signal: AbortSignal.timeout(8000), headers: { "User-Agent": "Muon/0.1" } });
         if (!res.ok) throw new Error(`search returned HTTP ${res.status}`);
         data = await res.json();
       } catch (e) {

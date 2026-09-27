@@ -6,7 +6,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { startServer } from "./helpers.mjs";
 
-const SANDBOX = path.join(os.homedir(), "Work/MacAgent/.sandbox/fileops");
+const SANDBOX = path.join(os.homedir(), "Work/Muon/.sandbox/fileops");
 let s;
 before(async () => {
   await fs.rm(SANDBOX, { recursive: true, force: true });
@@ -86,7 +86,7 @@ test("mutating tools refuse an allowed root itself (sandboxed roots — never re
   // the worst case is trashing this sandbox, never the user's real folders.
   const ROOT = path.join(SANDBOX, "fake-root");
   await fs.mkdir(path.join(ROOT, "dest"), { recursive: true });
-  const s2 = startServer({ MACAGENT_ALLOWED_ROOTS: ROOT });
+  const s2 = startServer({ MUON_ALLOWED_ROOTS: ROOT });
   try {
     await s2.init();
     const r = await s2.tool("trashItems", { paths: [ROOT] });

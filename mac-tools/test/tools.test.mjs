@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { startServer } from "./helpers.mjs";
 
-const SANDBOX = path.join(os.homedir(), "Work/MacAgent/.sandbox/tools");
+const SANDBOX = path.join(os.homedir(), "Work/Muon/.sandbox/tools");
 let s;
 before(async () => {
   await fs.rm(SANDBOX, { recursive: true, force: true });
@@ -44,9 +44,9 @@ test("findFiles finds by name (rg fallback works even before Spotlight indexes)"
   const r = await s.tool("findFiles", { name: "hello", scope: SANDBOX });
   assert.match(r.text, /hello\.txt/);
 });
-test("listProjects includes MacAgent", async () => {
+test("listProjects includes Muon", async () => {
   const r = await s.tool("listProjects");
-  assert.match(r.text, /~\/Work\/MacAgent\t/);
+  assert.match(r.text, /~\/Work\/Muon\t/);
 });
 test("getSystemStats and listRunningApps return data", async () => {
   assert.match((await s.tool("getSystemStats")).text, /RAM: 24 GB total/);
@@ -57,7 +57,7 @@ test("openPath outside roots is rejected without running open", async () => {
   assert.ok(r.isError && /protected/.test(r.text));
 });
 test("audit log written", async () => {
-  const log = await fs.readFile(path.join(os.homedir(), "Library/Application Support/MacAgent/audit.jsonl"), "utf8");
+  const log = await fs.readFile(path.join(os.homedir(), "Library/Application Support/Muon/audit.jsonl"), "utf8");
   assert.ok(log.split("\n").some((l) => l.includes('"tool":"readFile"')));
 });
 
