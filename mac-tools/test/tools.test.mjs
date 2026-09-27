@@ -90,3 +90,15 @@ test("allowed roots match by real path, so a root spelled in different case stil
     assert.equal(r.text, "case ok\n");
   } finally { s2.close(); }
 });
+
+test("listProjects finds projects in a lowercase ~/work or ~/projects folder", async () => {
+  const work = path.join(SANDBOX, "lc/work");
+  await fs.mkdir(path.join(work, "demo-app"), { recursive: true });
+  await fs.writeFile(path.join(work, "demo-app/package.json"), JSON.stringify({ name: "demo-app", dependencies: { "react-native": "0.81.0" } }));
+  const s2 = startServer({ MUON_ALLOWED_ROOTS: work });
+  try {
+    await s2.init();
+    const r = await s2.tool("listProjects");
+    assert.match(r.text, /demo-app\treact-native/, r.text);
+  } finally { s2.close(); }
+});

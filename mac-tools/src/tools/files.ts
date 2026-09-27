@@ -123,7 +123,7 @@ export function registerFileTools(server: McpServer): void {
     annotations: RO,
     handler: async () => {
       const out: string[] = [];
-      for (const root of ALLOWED_ROOTS.filter((r) => /\/(Projects|Work)$/.test(r))) {
+      for (const root of ALLOWED_ROOTS.filter((r) => /\/(projects|work)$/i.test(r))) {
         const entries = await fsp.readdir(root, { withFileTypes: true }).catch(() => []);
         for (const e of entries) {
           if (!e.isDirectory() || e.name.startsWith(".")) continue;
