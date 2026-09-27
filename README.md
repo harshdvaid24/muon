@@ -228,16 +228,16 @@ Crash reports are read from `~/Library/Logs/DiagnosticReports` only, read-only. 
 
 ```mermaid
 flowchart TD
-    A["Ask: type, speak, drop a file"] --> B["Parse directly · 0 ms"]
-    B --> C["Memory · repeats in ms"]
-    C --> D["Apple on-device model · ~1 s"]
-    D --> F["Typed tool + confirmation card"]
-    D -. "multi-step · images · long text" .-> E["Local LLM · LM Studio, on demand"]
+    A["You ask: type it, say it, or drop a file on it"] --> B["Muon understands common asks instantly"]
+    B --> C["Asked before? Answered from memory"]
+    C --> D["Your Mac's built-in AI thinks it over (about a second)"]
+    D --> F["Muon does it, and asks you before changing anything"]
+    D -. "big jobs only" .-> E["A larger AI on your Mac, woken up when needed"]
     E --> F
-    F --> G["Answer · Muon learns"]
+    F --> G["You get the answer. Muon remembers for next time"]
 ```
 
-Most requests stop at the first three boxes. The big model loads only when needed and unloads after five minutes. Every change goes through a confirmation card.
+Everything happens on your Mac. Nothing is uploaded, nothing runs in the background, and nothing is changed without your OK.
 
 ## Private by design
 
