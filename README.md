@@ -56,6 +56,49 @@ Muon has no indexer and no background job. It learns from what you do with it.
 
 **Memory.** Repeated requests are answered from a capped local cache in milliseconds, with no model at all. Muon learns your project aliases. `save macro <name>` replays a multi-step action by name.
 
+## Why Muon
+
+Compared with the local AI agents people actually run on a Mac, from each project's own README on 28 September 2026. Muon is the newest and by far the smallest project here; the point is what it is built to be.
+
+| | **Muon** | OpenClaw (391k★, MIT) | goose (54.7k★, Apache-2.0) | Open Interpreter (68.5k★, Apache-2.0) | AnythingLLM (66.5k★) · Jan (44.7k★) |
+|---|---|---|---|---|---|
+| What it is | Menu bar agent for everyday Mac work: writing, documents, screenshots, voice, files, apps, dev chores | Personal assistant that connects to your messaging apps, with a persistent Gateway daemon | General-purpose agent, desktop app + CLI, 70+ MCP extensions, part of the Linux Foundation | Coding agent (forked from OpenAI's Codex), optimized for low-cost models | Private chat and RAG apps with local models; Jan adds MCP |
+| How the model changes things | **Never a shell.** 56 typed tools, allowlisted binaries with argument arrays, path policy, one card per change, Trash not delete | "Tools run on the host for the main session unless you configure sandboxing"; security guides and exposure runbooks published | Shell and file access through its developer extension and MCP servers; approval configurable | Runs commands inside native sandboxing, with approvals | They do not act on the Mac; chat, documents, web skills |
+| Everyday ask, end to end | **1–3 s on Apple's on-device model**; repeats in milliseconds | Model turns via the provider you pick | Model turns via the provider you pick | Model turns via the provider you pick | Local model chat, seconds to tens of seconds |
+| Idle cost | **56 MB app, no model loaded, no daemon** | Gateway daemon always on | Desktop app | CLI process while running | Model loaded while the app is open |
+| Needs a big model | **No.** Apple's on-device model + typed tools do the everyday work; a local LLM only for multi-step plans, images and very long text | Hosted or local providers | 15+ providers incl. Ollama | OpenAI-compatible providers | Yes, local |
+| Your text, documents, recordings | **Stay on the Mac** (only `webSearch`, `readWebPage`, `openInBrowser` go online, when you ask) | Depends on the provider | Depends on the provider | Depends on the provider | Stay on the Mac |
+| Learns from you | Memory, aliases, rules, For you, recent requests; capped, on-device | Sessions, memory | Sessions | Sessions | Chat history |
+| UI | Native Liquid Glass palette, voice, drop, Open With, Finder | Chat apps you already use | Desktop app, CLI | Terminal | Desktop app |
+| Install | Download or `brew install --cask`, ad-hoc signed | `curl … | bash` or npm | Desktop app or CLI script | `curl … | sh` | Download |
+
+**Where Muon is best**
+
+- **Everyday asks without a big model.** Rewrite this, explain that error, what does this PDF say, read this screenshot, meeting notes from this recording, total these receipts: 1–9 s on the built-in model, measured below, with nothing downloaded and nothing loaded at idle.
+- **Acting on the Mac safely.** The model never gets a shell. Every capability is a typed tool; every change is a card you approve; delete means Trash; paths outside your folders are refused. The whole model-facing surface is 8,200 lines you can read, with 150 tests.
+- **Zero idle cost.** 56 MB in the menu bar, no daemon, no model in memory. The tool server starts on demand and exits after five minutes.
+- **It gets smarter, not heavier.** Repeats come from memory; cleanups you repeat become rules; the empty palette suggests what is worth doing.
+
+**Where it is not.** Muon is not an autonomous agent for hour-long tasks, does not chat with you over WhatsApp, and needs macOS 26 on Apple Silicon with Apple Intelligence. For a coding session it hands you to Claude Code, Codex, Gemini CLI or Aider in a VS Code window rather than pretending to be one.
+
+**Measured on a MacBook Air M4, 24 GB, macOS 26** (Muon's own footer shows these on every answer):
+
+| Request | Time | Where |
+|---|---|---|
+| Rewrite an email in a professional tone | 1.3–2.6 s | on-device |
+| Explain a copied error or stack trace | 2–9 s | on-device |
+| Text of a screenshot | 0.7 s | on-device OCR |
+| Question about a scanned lease PDF | 1.5–3 s | on-device OCR + model |
+| Meeting notes from a 20 s recording | 2.3 s | on-device transcription + model |
+| Three receipt photos to a CSV | 3–7 s | on-device |
+| Largest transaction in a bank statement, exact | 8.6 s | computed from the text + on-device |
+| Which simulators do I have, open Xcode, biggest files | 0.3–2 s | on-device routing, typed tool |
+| Any request you have made before | under 0.3 s | memory, no model |
+
+**Why it is fast.** Most requests never reach a model: writing, documents, screenshots, cleanups, rules, file names and help are parsed deterministically, and anything you have asked before is answered from a capped local cache. What is left goes to Apple's on-device model with guided generation into a typed command, so there is no JSON to parse and nothing to hallucinate. Only multi-step plans, image understanding and very long text go to a bigger local model, and only when memory, thermal state and battery allow.
+
+**Why it is safe.** The model never gets a shell. It can only call tools that take typed arguments, run allowlisted binaries with argument arrays, refuse paths outside your allowed folders, and put every change behind a card you approve. Delete means Trash. The whole model-facing surface is 8,200 lines of Swift and TypeScript you can read, with 150 tests. Details in [Private by design](#private-by-design).
+
 ## Everything you can ask
 
 Muon understands plain language. These are examples. There is no fixed syntax.
@@ -183,29 +226,38 @@ Crash reports are read from `~/Library/Logs/DiagnosticReports` only, read-only. 
 
 ## How it works
 
-```
-  ⇧⌥Space ──▶ Liquid Glass palette ──▶ optional Laya hint (~150 ms)
-                    │
-     deterministic parsers first: writing, documents, screenshots,
-     cleanup, rules. The common requests never depend on a model guessing.
-                    │
-      ┌─────────────┼───────────────────────────┐
-      ▼             ▼                           ▼
-   Tier 0        Tier 1                      Tier 2
-   memory        Apple on-device model       LM Studio (Qwen 3.5, MLX)
-   0 ms          ~1 s, no app memory         multi-step plans, images,
-   repeats       single steps, chat, all     very long text. Loads only when
-                 writing and explaining      the Mac can spare it, unloads in 5 min
-      └─────────────┴─────────────┬─────────────┘
-                                  ▼
-       in-app tools (Swift)              mac-tools (TypeScript MCP server)
-       OCR, Vision, SpeechAnalyzer,      typed tools, path policy, audit log
-       documents, receipts, crashes      starts on demand, exits after 5 min idle
-                                  ▼
-   text · documents · screenshots · voice · files · apps · disk · devices · git · GitHub · web
+```mermaid
+flowchart TB
+    K["⇧⌥Space · voice · drop a file · Open With · Finder"] --> P["Liquid Glass palette (Swift, AppKit + SwiftUI)"]
+    P --> D{"Deterministic parsers (0 ms)<br/>writing · documents · screenshots · voice · receipts<br/>cleanup · rules · file names · help · start agent"}
+    D -- "matched" --> T["Host tools (Swift)<br/>Vision OCR · PDFKit · SpeechAnalyzer<br/>FoundationModels · Numbers"]
+    D -- "not matched" --> M{"Memory (SQLite, capped)<br/>intent cache · aliases · macros"}
+    M -- "seen before" --> X
+    M -- "new" --> F["Tier 1 · Apple on-device model<br/>guided generation into a typed Command<br/>~1 s · no app memory"]
+    F -- "one tool" --> X["Execute a typed tool"]
+    F -- "complex" --> L["Tier 2 · LM Studio (Qwen 3.5, MLX)<br/>tool loop ≤ 8 steps · loads only when the Mac<br/>can spare it · unloads after 5 min"]
+    L --> X
+    X --> C{"Change anything?"}
+    C -- "yes" --> A["Confirmation card<br/>Allow · Always allow in this folder · Cancel"]
+    C -- "no" --> R
+    A --> R["Result in the palette<br/>Copy · Paste back · footer says who answered"]
+    X -.-> S["mac-tools (TypeScript MCP server)<br/>43 typed tools · argv only · allowlisted binaries<br/>path policy · audit log · starts on demand"]
+    R --> LRN["Learning loop<br/>intent cache · aliases · frecency<br/>rules · For you · recent requests"]
 ```
 
 Tier 0 is a capped local cache. Tier 1 is Apple's on-device model: single steps, chat, and all writing and explaining. Tier 2 is LM Studio, used only for multi-step planning, image understanding and very long text. It loads only when memory, thermal state and battery allow, and unloads after five minutes. Everything works without LM Studio and without Laya; those two only add power.
+
+```mermaid
+flowchart LR
+    U["You"] -- "ask" --> Q["request"]
+    Q --> H["history + intent cache<br/>(capped, 14-day half-life)"]
+    H --> FY["For you rows<br/>old screenshots · Downloads size<br/>duplicates · crashes · clipboard triage<br/>computed on open, at most daily"]
+    H --> RU["Rules<br/>a cleanup run three times is offered weekly<br/>run on wake with a notification · undo"]
+    H --> RC["Recent requests<br/>↑ ↓ ⇥ ↩"]
+    FY --> U
+    RU --> U
+    RC --> U
+```
 
 ## Private by design
 
@@ -288,6 +340,18 @@ python3 -m venv ~/.muon/needle && ~/.muon/needle/bin/pip install cactus-needle
 ~/.muon/needle/bin/python scripts/needle-serve.py     # 127.0.0.1:8766, nothing leaves the Mac
 MUON_NO_CACHE=1 Muon.app/Contents/MacOS/Muon --query "is my mac hot"   # prints via=Needle 3 · NN ms when Needle answered
 ```
+
+**Fine-tune it on your own requests.** Needle learns your tools from examples (LoRA on the frozen base, merged into a `.cact`). Muon ships the pipeline: the tool schemas come from the tool server, the examples come from templates plus the routes Muon has already learned from you, and requests you list in `held_out.txt` never enter training so you can measure honestly.
+
+```bash
+~/.muon/needle/bin/pip install "cactus-needle[train]"                     # JAX, once
+node scripts/needle-tools.mjs > tools.json                                 # Muon's tool schemas
+~/.muon/needle/bin/python scripts/needle-data.py tools.json               # train.jsonl + val.jsonl
+~/.muon/needle/bin/needle finetune train.jsonl --epochs 2 --batch-size 8 --max-len 2048 --out muon_lora.safetensors
+~/.muon/needle/bin/needle build checkpoints/needle3.safetensors --lora muon_lora.safetensors --out muon.cact
+NEEDLE_WEIGHTS=muon.cact ~/.muon/needle/bin/python scripts/needle-serve.py
+```
+
 
 ## Use the tools from other apps
 

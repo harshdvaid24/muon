@@ -94,6 +94,19 @@ ol.steps{margin:0;padding-left:20px;color:var(--muted);font-size:14px}ol.steps l
 footer{border-top:1px solid var(--card-b);padding:36px 0 56px;color:var(--faint);font-size:14px}
 footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}
 @media (max-width:640px){nav .links a.hide-sm{display:none}header.hero{padding-top:56px}section{padding:52px 0}}
+
+.pipe{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:26px 0 0}
+.pipe .step{border:1px solid var(--line,rgba(127,127,127,.25));border-radius:14px;padding:14px 14px 12px;background:var(--card,rgba(127,127,127,.06));position:relative}
+.pipe .step .n{font:600 11px/1 -apple-system,BlinkMacSystemFont,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--accent,#7c6cff);margin-bottom:8px}
+.pipe .step b{display:block;font-size:15px;margin-bottom:6px}
+.pipe .step p{font-size:13px;line-height:1.45;color:var(--muted,#8a8f98);margin:0}
+.cmp{overflow-x:auto;margin-top:26px;-webkit-overflow-scrolling:touch}
+.cmp table{border-collapse:collapse;width:100%;min-width:760px;font-size:13.5px}
+.cmp th,.cmp td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line,rgba(127,127,127,.25))}
+.cmp th{font-weight:600;color:var(--muted,#8a8f98);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.cmp td:first-child{color:var(--muted,#8a8f98)}
+.cmp td.muon{font-weight:600}
+.cmp .src{font-size:12px;color:var(--muted,#8a8f98);margin-top:10px}
 </style>
 </head>
 <body>
@@ -102,6 +115,7 @@ footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}
     <a class="brand" href="#"><img src="media/icon.png" alt="">Muon</a>
     <div class="links">
       <a class="hide-sm" href="#features">Features</a>
+      <a class="hide-sm" href="#compare">Compared</a>
       <a class="hide-sm" href="#privacy">Privacy</a>
       <a class="hide-sm" href="#install">Install</a>
       <a href="https://github.com/harshdvaid24/muon">GitHub</a>
@@ -167,6 +181,14 @@ footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}
     <div class="kicker">Why it's fast</div>
     <h2>It only thinks as hard as it has to.</h2>
     <p class="sub">Common requests (writing, documents, screenshots, cleanup, rules) are parsed directly, so they never depend on a model guessing. The rest goes to the smallest tier that can handle it.</p>
+    <div class="pipe" aria-label="How a request flows">
+      <div class="step"><div class="n">1 · parse</div><b>Deterministic first</b><p>Writing, documents, screenshots, voice, receipts, cleanups, rules, file names, help: parsed directly, 0 ms, no model guessing.</p></div>
+      <div class="step"><div class="n">2 · remember</div><b>Memory</b><p>Anything you asked before replays from a capped local cache in milliseconds.</p></div>
+      <div class="step"><div class="n">3 · on-device</div><b>Apple's model</b><p>Guided generation straight into a typed command. About a second. No app memory.</p></div>
+      <div class="step"><div class="n">4 · only if needed</div><b>Local LLM</b><p>Multi-step plans, images, very long text. Loads when the Mac can spare it, unloads after 5 min.</p></div>
+      <div class="step"><div class="n">5 · act</div><b>Typed tools</b><p>56 tools, argv only, path policy, one confirmation card per change. Never a shell.</p></div>
+      <div class="step"><div class="n">6 · learn</div><b>It gets smarter</b><p>Intent cache, aliases, rules, For you, recent requests. Capped, on-device.</p></div>
+    </div>
     <div class="tiers">
       <div class="tier"><div class="l">Tier 0 · memory</div><div class="t">~0 ms</div><p>Repeated requests replay from a small local cache. No model at all.</p></div>
       <div class="tier"><div class="l">Tier 1 · on-device</div><div class="t">~1 s</div><p>Apple's built-in model handles single steps, chat and all writing and explaining. No app memory used.</p></div>
@@ -187,6 +209,27 @@ footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}
       <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg><p><b>Delete means Trash</b><span>Nothing is ever permanently deleted. Put Back always works.</span></p></div>
       <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><p><b>The internet is a few named tools</b><span>Only web search, page reading and open-in-browser go online, and only when you ask.</span></p></div>
       <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><p><b>Everything is logged</b><span>An audit log of every action. Paths only, never file contents.</span></p></div>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="wrap">
+    <div class="kicker">Compared</div>
+    <h2>Built to act on your Mac without handing a model the keys.</h2>
+    <p class="sub">The local agents people run on a Mac, from each project's own README on 28 September 2026. Muon is the newest and smallest of them; this is what it is built to be.</p>
+    <div class="cmp">
+      <table>
+        <tr><th></th><th>Muon</th><th>OpenClaw</th><th>goose</th><th>Open Interpreter</th><th>AnythingLLM · Jan</th></tr>
+        <tr><td>What it is</td><td class="muon">Menu bar agent for everyday Mac work</td><td>Personal assistant in your messaging apps, persistent Gateway daemon</td><td>General-purpose agent, desktop + CLI, MCP extensions</td><td>Coding agent forked from Codex</td><td>Private chat and RAG apps</td></tr>
+        <tr><td>How the model changes things</td><td class="muon">Never a shell. Typed tools, allowlisted binaries, path policy, one card per change, Trash not delete</td><td>“Tools run on the host … unless you configure sandboxing”</td><td>Shell and files via its developer extension; approval configurable</td><td>Commands in native sandboxing, with approvals</td><td>Do not act on the Mac</td></tr>
+        <tr><td>Everyday ask</td><td class="muon">1–3 s on Apple's on-device model; repeats in ms</td><td>Model turns, your provider</td><td>Model turns, your provider</td><td>Model turns, your provider</td><td>Local chat, seconds or more</td></tr>
+        <tr><td>Idle cost</td><td class="muon">56 MB, no model, no daemon</td><td>Gateway daemon always on</td><td>Desktop app</td><td>CLI while running</td><td>Model loaded while open</td></tr>
+        <tr><td>Needs a big model</td><td class="muon">No</td><td>Hosted or local</td><td>15+ providers incl. Ollama</td><td>OpenAI-compatible providers</td><td>Yes, local</td></tr>
+        <tr><td>Your files and recordings</td><td class="muon">Stay on the Mac</td><td>Depends on provider</td><td>Depends on provider</td><td>Depends on provider</td><td>Stay on the Mac</td></tr>
+        <tr><td>Install</td><td class="muon">Download or brew cask</td><td>curl | bash or npm</td><td>Desktop app or script</td><td>curl | sh</td><td>Download</td></tr>
+      </table>
+      <p class="src">Not for: hour-long autonomous tasks, chatting over WhatsApp, or being your coding agent — for that Muon opens Claude Code, Codex, Gemini CLI or Aider in a VS Code window for the project you name.</p>
     </div>
   </div>
 </section>
