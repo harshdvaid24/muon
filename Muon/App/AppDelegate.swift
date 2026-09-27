@@ -14,8 +14,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let delegate = AppDelegate()
         app.delegate = delegate
         app.setActivationPolicy(.accessory)
+        app.mainMenu = Self.makeMainMenu()
         _ = CLI.runIfRequested()
         app.run()
+    }
+
+    /// AppKit routes ⌘Z/⌘X/⌘C/⌘A through the Edit menu; a menu bar app has none unless it builds one.
+    /// ⌘V is left out on purpose: the palette handles it (attach a copied file or image, else paste text).
+    private static func makeMainMenu() -> NSMenu {
+        let main = NSMenu()
+        let appItem = NSMenuItem(); main.addItem(appItem)
+        let appMenu = NSMenu(); appItem.submenu = appMenu
+        appMenu.addItem(withTitle: "Quit Muon", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let editItem = NSMenuItem(); main.addItem(editItem)
+        let edit = NSMenu(title: "Edit"); editItem.submenu = edit
+        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        edit.addItem(.separator())
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        return main
     }
 
     /// One-time move of the pre-rename support folder (learned memory, audit log) to the new name.
@@ -303,7 +322,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if recent.isEmpty {
                 return [PaletteModel.Row(icon: "questionmark.circle", title: "What can I ask?", subtitle: "Everything Muon can do, with examples", section: "Get started", fill: "what can you do") { m.query = "what can you do"; m.submit() }]
             }
-            return recent.map { q in PaletteModel.Row(icon: "clock.arrow.circlepath", title: Agent.short(q), subtitle: nil, section: "Recent", fill: q) { m.query = q; m.submit() } }
+            return recent.map { q in PaletteModel.Row(icon: "clock.arrow.circlepath", title: Attachment.displayTitle(forRequest: q), subtitle: nil, section: "Recent", fill: q) { m.query = q; m.submit() } }
         }
         if let cached = Proactive.cached() { m.idleRows = rows(cached) + recents(); return }
         m.idleRows = rows(Proactive.clipboardSuggestions() + Proactive.undoSuggestion()) + recents()

@@ -42,6 +42,15 @@ enum Attachment {
         }
     }
 
+    /// How a past request reads in the Recent list: home as ~, pasted images by name only.
+    static func displayTitle(forRequest q: String) -> String {
+        var t = q
+        if let re = try? NSRegularExpression(pattern: "\"?" + NSRegularExpression.escapedPattern(for: pastedDir) + "/[^\" ]+\"?") {
+            t = re.stringByReplacingMatches(in: t, range: NSRange(t.startIndex..., in: t), withTemplate: "(pasted image)")
+        }
+        return t.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+    }
+
     static func icon(for path: String) -> String {
         switch kind(of: path) {
         case .image: return "photo"

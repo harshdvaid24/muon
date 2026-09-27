@@ -13,7 +13,7 @@
 [![Release](https://img.shields.io/github/v/release/harshdvaid24/muon)](https://github.com/harshdvaid24/muon/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/harshdvaid24/muon/total)](https://github.com/harshdvaid24/muon/releases)
 
-<img src="docs/media/demo.gif" width="640" alt="Muon demo: rewriting an email, explaining an error, answering from a scanned PDF, reading a screenshot, meeting notes from a recording, totaling receipts">
+<img src="docs/media/demo.gif" width="640" alt="Muon demo: a spoken request, rewriting an email, explaining an error, answering from a pasted PDF, explaining a pasted screenshot, meeting notes from a recording, totaling receipts, code search, a rule, recent requests and the in-app catalog">
 
 <sub>Real recording on the reproducible demo workspace · [HD video](docs/media/demo.mp4)</sub>
 
@@ -33,12 +33,14 @@ Type it, or press `⌘⇧M` and say it. Drop a file on the palette, press `⌘O`
 |---|---|
 | **Fix your writing.** Copy text in any app, then ask *"make this professional"*, *"fix grammar"*, *"shorten"* or *"reply saying I'll be there at 5"*. The result has **Copy** and **Paste** buttons. Paste puts it straight back into the app you came from. About one second, on-device. | ![professional rewrite](docs/media/professional.png) |
 | **Explain errors and code.** Copy an error, a stack trace, a block of code or some jargon and ask *"explain this"*. Muon says what it means and what to do about it. | ![explain error](docs/media/explain_error.png) |
-| **Ask your documents.** *"what does ~/Documents/MuonDemo/lease.pdf say about the deposit"* answers from the file. PDF, .docx, .txt, .md, .csv, .json and images. Scanned PDFs are read with on-device OCR. | ![lease answer](docs/media/lease.png) |
-| **Read screenshots.** *"explain the error in this screenshot"* reads your newest screenshot with on-device OCR and explains what went wrong. Also *"read the latest screenshot"* and *"rename my screenshots"* by what they show. | ![screenshot error](docs/media/screenshot_error.png) |
+| **Ask your documents.** Drop a file on the palette, press `⌘O`, or `⌘V` a copied file, then ask *"who pays the deposit and how much"*. Typed paths work too: *"what does ~/Documents/lease.pdf say about the deposit"*. PDF, .docx, .txt, .md, .csv, .json and images. Scanned PDFs are read with on-device OCR. | ![lease answer](docs/media/lease.png) |
+| **Read screenshots.** `⌘V` a copied screenshot (or any image) and ask *"explain this"*: on-device OCR plus an explanation. Also *"explain the error in this screenshot"* for your newest one, *"read the latest screenshot"*, and *"rename my screenshots"* by what they show. | ![screenshot error](docs/media/screenshot_error.png) |
 | **Meeting notes from a recording.** *"meeting notes from ~/Downloads/standup.mp4"* transcribes on-device and returns a summary, the decisions and the action items. Audio and video files. | ![meeting notes](docs/media/meeting.png) |
 | **Receipts into expenses.** *"total the receipts in ~/Documents/Receipts"* reads each receipt photo, lists merchant, date and total, adds them up, and saves a CSV after one confirmation. | ![receipts](docs/media/receipts.png) |
 | **Developer chores.** *"search code for TODO in ~/Projects/weather-app"* shows every hit; press ↩ to open it. Also *"run weather-app on iPhone 17"*, *"commit this"*, *"clean the metro caches"* and *"why did my app crash"*. | ![todos](docs/media/todos.png) |
 | **Files, disk and apps.** *"move the screenshots in ~/Downloads into ~/Downloads/Archive"* lists the exact files and asks once. Delete always means Trash. Also largest files, duplicates, memory hogs and menu commands in any app. | ![cleanup](docs/media/cleanup_confirm.png) |
+| **Just say it.** Press `⌘⇧M` or click the mic, say what you need and pause. Live on-device transcription fills the field and the request runs. Spoken requests can get spoken replies (Settings › Voice). | ![listening](docs/media/voice.png) |
+| **Ask what it can do.** *"what can you do"* shows the whole catalog inside the app, instantly, without a model. | ![catalog](docs/media/help.png) |
 
 **Try it yourself:** `scripts/demo-workspace.sh` creates a throwaway `~/Documents/MuonDemo` with a sample app, an error screenshot, a scanned lease PDF, three receipt photos, an inbox with a client email and an error log, and a spoken standup clip.
 
@@ -50,10 +52,9 @@ Muon has no indexer and no background job. It learns from what you do with it.
 |---|---|
 | **For you.** Open the empty palette and Muon suggests what is worth doing: old screenshots to archive, how big Downloads has grown, duplicate space to reclaim, a recent crash to explain. If an error is on your clipboard it offers to explain it; a URL, to summarize it; long text, to summarize it. Computed at most once a day, only when you open the palette. | ![for you](docs/media/foryou.png) |
 | **Rules.** A cleanup you have run three times is offered as a weekly rule. Or ask directly: *"every monday move the screenshots in ~/Downloads older than 30 days into ~/Downloads/Archive"*. Rules run on wake or launch with a notification. *"undo"* reverses the last automated move or rename. Managed in Settings. | ![rule saved](docs/media/rule.png) |
+| **Recent.** Your recent requests sit under the suggestions, most used first. `↑` `↓` walk them, `⇥` puts one in the field to edit, `↩` runs it. With something typed, `↑` `↓` cycle through recent requests like a shell. | ![recent requests](docs/media/recent.png) |
 
 **Memory.** Repeated requests are answered from a capped local cache in milliseconds, with no model at all. Muon learns your project aliases. `save macro <name>` replays a multi-step action by name.
-
-**Recent.** Your recent requests sit under the suggestions, most used first. `↑` `↓` walk them, `⇥` puts one in the field to edit, `↩` runs it. With something typed, `↑` `↓` cycle through recent requests like a shell.
 
 ## Everything you can ask
 

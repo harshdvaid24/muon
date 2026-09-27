@@ -121,7 +121,8 @@ enum LMStudioTier {
             content.append(["type": "image_url", "image_url": ["url": "data:image/jpeg;base64," + jpeg.base64EncodedString()]])
         }
         let body: [String: Any] = ["model": model, "messages": [["role": "user", "content": content]], "temperature": 0.2, "max_tokens": 1200,
-                                   "stream": false, "ttl": Settings.modelTTL, "chat_template_kwargs": ["enable_thinking": false]]
+                                   "stream": false, "ttl": Settings.modelTTL,
+                                   "reasoning_effort": "none"]   // LM Studio: Qwen3.5 ignores enable_thinking; this is what turns reasoning off
         let resp = try await post("/v1/chat/completions", body)
         guard let msg = (resp["choices"] as? [[String: Any]])?.first?["message"] as? [String: Any], let text = msg["content"] as? String else { throw LMError.badResponse }
         return text.trimmingCharacters(in: .whitespacesAndNewlines)

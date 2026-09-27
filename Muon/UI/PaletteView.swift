@@ -82,7 +82,10 @@ struct PaletteView: View {
         let k = press.characters.lowercased()
         if press.modifiers == .command, k == "o" { model.onAttach(); return .handled }
         if press.modifiers == [.command, .shift], k == "m" { model.onListen(); return .handled }
-        if press.modifiers == .command, k == "v", let p = Attachment.fromPasteboard() { model.attachment = p; return .handled }
+        if press.modifiers == .command, k == "v" {
+            if let p = Attachment.fromPasteboard() { model.attachment = p } else { NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil) }
+            return .handled
+        }
         return .ignored
     }
 

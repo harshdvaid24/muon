@@ -58,6 +58,12 @@ import Testing
         #expect(MediaIntent.parse("explain this \"/tmp/my shots/Screenshot 1.png\"") == .explainScreenshot("/tmp/my shots/Screenshot 1.png"))
     }
 
+    @Test func recentTitlesReadWell() {
+        let home = NSHomeDirectory()
+        #expect(Attachment.displayTitle(forRequest: "search code for TODO in \(home)/Work/app") == "search code for TODO in ~/Work/app")
+        #expect(Attachment.displayTitle(forRequest: "explain this \"\(Attachment.pastedDir)/pasted-2026-09-27-172923.png\"") == "explain this (pasted image)")
+    }
+
     @Test func pastedImagesArePruned() throws {
         let dir = NSTemporaryDirectory() + "muon-paste-\(UUID().uuidString)"
         let saved = Attachment.pastedDir
@@ -71,10 +77,16 @@ import Testing
 }
 
 @Suite struct VoiceTests {
-    @Test func liveTranscriptionWorksOnAFile() async throws {
-        let path = NSHomeDirectory() + "/Documents/MuonDemo/Inbox/standup.aiff"
-        guard FileManager.default.fileExists(atPath: path) else { return }
+    /// A spoken clip made on the spot (no protected folder, so no privacy prompt can block the test host).
+    @Test(.timeLimit(.minutes(2))) func liveTranscriptionWorksOnAFile() async throws {
+        let path = NSTemporaryDirectory() + "muon-voice-\(UUID().uuidString).aiff"
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        let say = Process()
+        say.executableURL = URL(fileURLWithPath: "/usr/bin/say")
+        say.arguments = ["-o", path, "Quick stand up. The offline banner is finished and the forecast crash is fixed."]
+        try say.run(); say.waitUntilExit()
+        guard say.terminationStatus == 0 else { return }
         let text = try await LiveTranscription.transcribe(file: path)
-        #expect(text.lowercased().contains("stand"), Comment(rawValue: text))
+        #expect(text.lowercased().contains("banner") || text.lowercased().contains("forecast"), Comment(rawValue: text))
     }
 }
