@@ -73,6 +73,7 @@ enum Permission {
         case "quitApplication": return "xmark.app.fill"
         case "killProcess": return "bolt.slash.fill"
         case "runMenuCommand": return "filemenu.and.cursorarrow"
+        case "openTerminal": return "terminal.fill"
         case "writeTextFile": return "doc.badge.plus"
         case "runOnDevice": return "iphone"
         case "triggerWorkflow": return "paperplane.fill"
@@ -102,6 +103,11 @@ enum Permission {
         case "triggerWorkflow":
             let project = ((args["project"] as? String).map { ($0 as NSString).lastPathComponent }) ?? "project"
             return ("Trigger GitHub workflow \(args["workflow"] as? String ?? "?")", "In \(project)\((args["ref"] as? String).map { " on \($0)" } ?? ""). This can publish builds or releases.")
+        case "openTerminal":
+            let project = args["project"] as? String ?? "?"
+            let cmd = (args["command"] as? String ?? "").trimmingCharacters(in: .whitespaces)
+            let place = (args["app"] as? String) == "vscode" ? "in a Terminal window, and the project in VS Code" : "in a Terminal window"
+            return ("Start \(AgentLaunch.who(cmd)) for \((project as NSString).lastPathComponent)", "Opens \(short(project)) \(place)\(cmd.isEmpty ? "" : ", and runs “\(cmd)” there"). You take it from there.")
         case "runMenuCommand":
             let app = args["name"] as? String ?? args["app"] as? String ?? "app"
             let path = (args["path"] as? [String]) ?? []

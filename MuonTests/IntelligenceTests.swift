@@ -86,6 +86,42 @@ import Testing
         #expect(TextTools.chunks(of: "short") == ["short"])
     }
 
+    /// Digit-dense text overflows the on-device window well under the character limit; the parts path must cope.
+    @Test(.timeLimit(.minutes(3))) func denseTableIsAnsweredInParts() async throws {
+        guard FoundationTier.isAvailable else { return }
+        let rows = (0..<220).map { i in "0\(i % 28 + 1) Jun 19  UPI/DR/\(100000 + i * 7)/PAYTM  \(i == 150 ? "67,148.00" : String(format: "%.2f", Double(i * 37 % 1900) + 5))  \(String(format: "%.2f", 120000.0 - Double(i) * 310))" }
+        let text = "Account statement\n" + rows.joined(separator: "\n")
+        let question = "Using only the text, answer this question briefly and specifically: what is the largest transaction?"
+        let facts = try #require(Numbers.facts(question: question, text: text))
+        #expect(facts.contains("Largest amount: 67,148.00"), Comment(rawValue: facts))
+        let answer = try await TextTools.generate(instruction: question + "\n\n" + facts, input: text)
+        #expect(answer.contains("67,148") || answer.contains("67148"), Comment(rawValue: answer))
+    }
+
+    @Test func numbersFactsExcludeRunningBalancesForTransactionQuestions() {
+        let text = """
+        Date  Description  Amount  Balance
+        16 Jun 19  ATM WDL  1,500.00  112,953.65
+        NEFT CR FROM ACME LTD
+        67,148.00  180,101.65
+        01 Jul 19  UPI  20,000.00  160,101.65
+        05 Jul 19  UPI  300.00  159,801.65
+        TOTAL 88,948.00 0.00 159,801.65
+        """
+        let f = Numbers.facts(question: "find the largest transaction", text: text)!
+        #expect(f.contains("Largest amount: 67,148.00 — NEFT CR FROM ACME LTD · 67,148.00 180,101.65"), Comment(rawValue: f))
+        #expect(f.contains("Next largest amount: 20,000.00 — 01 Jul 19 UPI 20,000.00 160,101.65"), Comment(rawValue: f))   // no stale description
+        #expect(!f.contains("Date Description Amount Balance ·"), Comment(rawValue: f))   // headers are not descriptions
+        #expect(!f.contains("88,948.00 —"))   // the TOTAL row is not a transaction
+        #expect(Numbers.withoutFigures("This is a bank statement for June. The largest transaction was 14,000 INR. It lists purchases and withdrawals.") == "This is a bank statement for June. It lists purchases and withdrawals.")
+        let b = Numbers.facts(question: "what was the highest balance", text: text)!
+        #expect(b.contains("Largest amount: 180,101.65"))
+        let t = Numbers.facts(question: "how much did I spend in total", text: text)!
+        #expect(t.contains("Total of 4 amounts (running balances excluded): 88,948.00"))
+        #expect(Numbers.facts(question: "summarize this", text: text) == nil)
+        #expect(Numbers.facts(question: "largest", text: "no numbers here") == nil)
+    }
+
     @Test func codeFencesStripped() {
         #expect(TextTools.clean("Use `map` here:\n```javascript\nconst a = 1\n```\ndone") == "Use map here:\nconst a = 1\ndone")
     }

@@ -72,17 +72,31 @@ enum TextTools {
         return out
     }
 
-    /// Map over chunks, then merge summaries and analyses into one answer.
+    /// One part through the on-device model; dense text (tables, numbers) can overflow the window even at the
+    /// chunk limit, so an overflowing part is split in half and retried, down to a few hundred characters.
+    private static func mapPart(_ instruction: String, _ part: String) async throws -> [String] {
+        do { return [try await onDevice(instruction: instruction, input: part)] }
+        catch let e as LanguageModelSession.GenerationError {
+            guard case .exceededContextWindowSize = e, part.count > 600 else { throw e }
+            var out: [String] = []
+            for half in chunks(of: part, limit: max(600, part.count / 2 + 1)) { out += try await mapPart(instruction, half) }
+            return out
+        }
+    }
+
+    static let mergeInstruction = "These are partial results from parts of one document, in order. Combine them into one final answer to the original request, in the same format and as brief as the parts. Keep every distinct fact once. If the request asks for a largest, smallest, earliest, latest, count or total, work it out across all parts and state the single answer."
+
+    /// Map over chunks, then merge summaries, analyses and answers into one result.
     private static func chunked(instruction: String, input: String) async throws -> String {
         var parts: [String] = []
-        for c in chunks(of: input) { parts.append(try await onDevice(instruction: instruction, input: c)) }
+        for c in chunks(of: input) { parts += try await mapPart(instruction, c) }
         if parts.count == 1 { return parts[0] }
         let joined = parts.joined(separator: "\n\n")
         let lower = instruction.lowercased()
-        let merge = lower.contains("summar") || lower.contains("analy") || lower.contains("brief") || lower.contains("answer")
+        let merge = lower.contains("summar") || lower.contains("analy") || lower.contains("brief") || lower.contains("answer") || lower.contains("explain")
         guard merge else { return joined }
-        let merged = joined.count > onDeviceInputLimit ? try await chunked(instruction: "Merge these partial results for one document into one answer in the same format. Keep every distinct point, drop duplicates.", input: joined) : joined
-        return try await onDevice(instruction: "These are partial results for parts of one document. Merge them into a single answer in the same format: keep every distinct fact, drop duplicates, keep it as brief as the parts. Original request: \(instruction)", input: merged)
+        let merged = joined.count > onDeviceInputLimit ? try await chunked(instruction: mergeInstruction, input: joined) : joined
+        return try await onDevice(instruction: mergeInstruction + " Original request: \(instruction)", input: merged)
     }
 
     static func clean(_ s: String) -> String {

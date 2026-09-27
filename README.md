@@ -128,6 +128,7 @@ Crash reports are read from `~/Library/Logs/DiagnosticReports` only, read-only. 
 ### Developer
 | Ask | What happens |
 |---|---|
+| `start claude code for weather-app` · `start agent for weather-app` · `open codex in weather-app` | Opens the project in VS Code and a Terminal window in that folder with the interactive assistant running. You drive it from there |
 | `run ~/Projects/weather-app on iPhone 17` · `run weather-app on pixel 9` | Builds and launches a React Native app. Background job, notification when done |
 | `which simulators do I have` | iOS simulators, Android emulators and connected devices |
 | `is my build done` · `job status` | Progress and logs of background builds |

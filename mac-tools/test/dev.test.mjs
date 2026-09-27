@@ -68,3 +68,13 @@ test("background jobs run detached, log output and record the result", async () 
 test("jobs refuse binaries outside the allowlist", async () => {
   await assert.rejects(() => startJob("bad", "test", SANDBOX, [{ bin: "bash", args: ["-c", "echo x"] }], false), /not allowed/);
 });
+
+test("openTerminal starts only coding assistants, inside allowed folders", async () => {
+  const by = Object.fromEntries((await s.call("tools/list")).result.tools.map((t) => [t.name, t]));
+  assert.equal(by.openTerminal.annotations.readOnlyHint, false);
+  assert.equal(by.openTerminal.annotations.destructiveHint, false);
+  let r = await s.tool("openTerminal", { project: path.join(SANDBOX, "plain"), command: "rm -rf /" });
+  assert.ok(r.isError && /only these can be started/.test(r.text), r.text);
+  r = await s.tool("openTerminal", { project: "~/Library", command: "claude" });
+  assert.ok(r.isError && /protected/.test(r.text), r.text);
+});

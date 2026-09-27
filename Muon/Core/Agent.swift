@@ -59,6 +59,20 @@ final class Agent {
     static let folderWords: [String: String] = ["downloads": "~/Downloads", "documents": "~/Documents", "desktop": "~/Desktop",
                                                 "projects": "~/Projects", "work": "~/Work"]
 
+    /// A project named by the user: an explicit path, a learned alias, or a listed project whose name matches well.
+    func projectTarget(_ term: String) async -> Project? {
+        let t = term.trimmingCharacters(in: .whitespaces)
+        if t.hasPrefix("~") || t.hasPrefix("/") {
+            let p = Settings.expand(t)
+            var isDir: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: p, isDirectory: &isDir), isDir.boolValue else { return nil }
+            return Project(name: (p as NSString).lastPathComponent, path: p, type: "folder")
+        }
+        let candidates = await resolver().resolve(t, memory: memory)
+        guard let best = candidates.first else { return nil }
+        return ProjectResolver.score(term: t, name: best.name) >= 60 || memory?.alias(t) == best.path ? best : nil
+    }
+
     /// Folder a request is scoped to: an explicit ~/ or / path in the text wins, then the model's scope, then a folder word or project name.
     func resolveScope(_ raw: String, query: String) async -> String? {
         if let r = query.range(of: #"(~/|/)[^\s,;]+"#, options: .regularExpression) {
@@ -124,6 +138,14 @@ final class Agent {
             if let h = layaHint, h.multistep >= 0.85, h.probability < 0.9 {
                 return finish(await tier2(q, approver: approver, status: status, out: out), query: q)
             }
+        }
+
+        // "start agent for kathak": a terminal in that project with Claude Code (or Codex, Gemini, Aider) running.
+        if forceTier == nil, let launch = AgentLaunch.parse(q), let project = await projectTarget(launch.project) {
+            let r = await execute("openTerminal", ["project": project.path, "command": launch.command, "app": "vscode"], approver: approver, status: status)
+            out.tier = 0; out.results = [r]; out.answer = r.text
+            if r.ok { memory?.bump(kind: "path", name: project.path) }
+            return out
         }
 
         // A file named without a path ("sampleStatement.pdf from downloads") resolves to the real file; the usual
@@ -368,7 +390,18 @@ final class Agent {
             } catch { out.answer = error.localizedDescription; return out }
         }
         do {
-            let text = try await TextTools.generate(instruction: w.instruction, input: input, status: status)
+            // "largest transaction", "how much in total": the figures are computed exactly and shown first; the model
+            // only writes the explanation, so a small model cannot misread the table.
+            var text: String
+            if let facts = Numbers.facts(question: w.instruction, text: input) {
+                // The narrative comes from the document's head (type, parties, period live there), never from merged parts.
+                let head = input.count > TextTools.onDeviceInputLimit / 2 ? String(input.prefix(TextTools.onDeviceInputLimit / 2)) : input
+                let rest = "Using this beginning of a document, say in 2-4 short sentences what it is (type, account or parties, period) and what kinds of entries it contains. Do not state any amounts; they are shown to the user separately. The user asked: “\(w.instruction.split(separator: ":").last.map(String.init)?.trimmingCharacters(in: .whitespaces) ?? "")”."
+                let narrative = Numbers.withoutFigures(try await TextTools.generate(instruction: rest, input: head, status: status))
+                text = facts + (narrative.isEmpty ? "" : "\n\n" + narrative)
+            } else {
+                text = try await TextTools.generate(instruction: w.instruction, input: input, status: status)
+            }
             out.result = TextResult(text: text, label: w.label, source: sourceLabel)
             memory?.bump(kind: "writing", name: w.label)
         } catch {
