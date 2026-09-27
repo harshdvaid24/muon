@@ -3,7 +3,7 @@ import Testing
 @testable import Muon
 
 @Suite(.enabled(if: FoundationTier.isAvailable, "Apple Intelligence on-device model unavailable")) struct FoundationTierTests {
-    let ctx = RoutingContext(aliases: ["kathak → ~/Work/kathak"], apps: ["Xcode", "Visual Studio Code"], projects: ["kathak", "thandaai", "VaidyaApp", "Muon"])
+    let ctx = RoutingContext(aliases: ["portfolio → ~/Work/portfolio"], apps: ["Xcode", "Visual Studio Code"], projects: ["portfolio", "weather-app", "HealthApp", "Muon"])
 
     func route(_ q: String) async throws -> Command? { try await FoundationTier.route(q, context: ctx) }
 
@@ -14,9 +14,9 @@ import Testing
     }
 
     @Test func openProjectInEditor() async throws {
-        guard let c = try await route("open kathak in vs code") else { return }
+        guard let c = try await route("open portfolio in vs code") else { return }
         #expect([.openProject, .openPath].contains(c.tool))
-        #expect(c.target.lowercased().contains("kathak"))
+        #expect(c.target.lowercased().contains("portfolio"))
     }
 
     @Test func searchByTopic() async throws {

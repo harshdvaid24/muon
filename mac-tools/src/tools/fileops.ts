@@ -37,6 +37,7 @@ async function batch(paths: string[], dest: string, op: (src: string, dst: strin
   for (const p of paths) {
     try {
       const src = await resolveMutable(p);
+      if (folder === src || folder.startsWith(src + path.sep)) { lines.push(`skip ${display(src)}: cannot move a folder into itself`); continue; }
       const dst = path.join(folder, path.basename(src));
       if (src === dst) { lines.push(`skip ${display(src)}: already there`); continue; }
       if (await exists(dst)) { lines.push(`skip ${display(src)}: ${display(dst)} already exists`); continue; }

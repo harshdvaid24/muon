@@ -6,11 +6,11 @@ struct Project: Equatable {
     let type: String
 }
 
-/// Resolves "kathak" → ~/Work/kathak using exact/prefix/substring/subsequence scoring, learned aliases and frecency.
+/// Resolves "portfolio" → ~/Work/portfolio using exact/prefix/substring/subsequence scoring, learned aliases and frecency.
 struct ProjectResolver {
     var projects: [Project]
 
-    /// Parses `listProjects` output: one "~/Work/kathak\treact-native" per line.
+    /// Parses `listProjects` output: one "~/Work/portfolio\treact-native" per line.
     static func parse(_ text: String) -> [Project] {
         text.split(separator: "\n").compactMap { line in
             let parts = line.split(separator: "\t", maxSplits: 1).map(String.init)

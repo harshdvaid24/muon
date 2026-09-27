@@ -76,7 +76,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         // If nothing else took focus (Esc, quit-app…), hand it back to the app the user came from.
         let me = ProcessInfo.processInfo.processIdentifier
         if NSWorkspace.shared.frontmostApplication?.processIdentifier == me {
-            if let prev = previousApp, !prev.isTerminated {
+            if let prev = previousApp, !prev.isTerminated, !prev.isHidden {   // never unhide an app the user hid
                 NSApp.yieldActivation(to: prev)
                 prev.activate()
             } else {

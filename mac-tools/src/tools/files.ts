@@ -37,7 +37,7 @@ export function registerFileTools(server: McpServer): void {
 
   defineTool(server, "findFiles", {
     description: "Find files or folders by (partial) name inside allowed folders. Uses Spotlight name index, falls back to ripgrep.",
-    input: { name: z.string().min(1).describe("Partial file/folder name, e.g. 'package.json' or 'kathak'"), scope: z.string().optional().describe("Folder to limit search to") },
+    input: { name: z.string().min(1).describe("Partial file/folder name, e.g. 'package.json' or 'portfolio'"), scope: z.string().optional().describe("Folder to limit search to") },
     annotations: RO,
     handler: async ({ name, scope }) => {
       const roots = await scopeRoots(scope);

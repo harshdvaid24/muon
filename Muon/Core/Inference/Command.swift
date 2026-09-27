@@ -9,6 +9,7 @@ enum ToolName: CaseIterable {
     case findFiles, searchFiles, searchCode, readFile, listDirectory, listProjects
     case listRunningApps, getSystemStats, moveItems, trashItems
     case webSearch, openInBrowser, chat
+    case largestFiles, findDuplicates, listDevices, jobStatus
     case complex, unknown
 }
 
@@ -25,6 +26,9 @@ struct Command {
 
     @Guide(description: "Search text, code pattern or Spotlight query for search tools; otherwise empty string")
     var query: String
+
+    @Guide(description: "Folder or project to search or scan in, if the user names one (for example ~/Downloads, Downloads, or a project name); otherwise empty string")
+    var scope: String
 
     @Guide(description: "Confidence that this tool choice is right, 0 to 1")
     var confidence: Double

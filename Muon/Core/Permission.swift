@@ -72,6 +72,8 @@ enum Permission {
         case "quitApplication": return "xmark.app.fill"
         case "killProcess": return "bolt.slash.fill"
         case "runMenuCommand": return "filemenu.and.cursorarrow"
+        case "runOnDevice": return "iphone"
+        case "triggerWorkflow": return "paperplane.fill"
         default: return "checkmark.shield.fill"
         }
     }
@@ -87,6 +89,12 @@ enum Permission {
         case "createFolder": return ("Create folder", short(args["path"] as? String ?? "?"))
         case "quitApplication": return ("Quit \(args["name"] as? String ?? "app")", "It may ask you to save unsaved work.")
         case "killProcess": return ("Force-terminate process \(args["pid"] ?? "?")", "Unsaved work in that process will be lost.")
+        case "runOnDevice":
+            let project = ((args["project"] as? String).map { ($0 as NSString).lastPathComponent }) ?? "project"
+            return ("Run \(project) on \(args["device"] as? String ?? "device")", "Builds with React Native and launches it on the \(args["platform"] as? String == "android" ? "Android emulator" : "iOS Simulator"). Runs in the background; you get a notification when it finishes.")
+        case "triggerWorkflow":
+            let project = ((args["project"] as? String).map { ($0 as NSString).lastPathComponent }) ?? "project"
+            return ("Trigger GitHub workflow \(args["workflow"] as? String ?? "?")", "In \(project)\((args["ref"] as? String).map { " on \($0)" } ?? ""). This can publish builds or releases.")
         case "runMenuCommand":
             let app = args["name"] as? String ?? args["app"] as? String ?? "app"
             let path = (args["path"] as? [String]) ?? []

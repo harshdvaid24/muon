@@ -55,16 +55,22 @@ enum FoundationTier {
         - trashItems: delete files (they go to the Trash).
         - webSearch: look something up on the internet (general knowledge, definitions, current events, "search for", "google", "what is / who is" about the world).
         - openInBrowser: open a web page or search results in the browser.
+        - largestFiles: the biggest files in a folder (free up disk space).
+        - findDuplicates: duplicate files in a folder.
+        - listDevices: which iOS simulators / Android emulators / devices are available.
+        - jobStatus: status of background jobs or builds ("is the build done", "job status").
         - chat: a greeting, thanks, or small talk ("hi", "hello", "how are you", "thanks"), or a simple conversational question that needs a spoken reply rather than an action on this Mac.
         - complex: needs several tools, filtering, comparison, code understanding, or planning.
         - unknown: unintelligible only.
 
         Rules: one tool only; anything with "and", "then", conditions, or age/size filters is complex. Keep target in the user's words. Never invent paths. A greeting or chit-chat is chat, never openApplication. Put the thing to look up in query for webSearch.
         Examples: "what is inside ~/Downloads" → listDirectory target "~/Downloads"; "show my projects" → listProjects;
-        "open kathak in xcode" → openProject target "kathak" app "Xcode"; "find pdfs about tax" → searchFiles query "pdf tax";
-        "where is package.json in thandaai" → findFiles target "package.json"; "is my mac hot" → getSystemStats;
+        "open portfolio in xcode" → openProject target "portfolio" app "Xcode"; "find pdfs about tax" → searchFiles query "pdf tax";
+        "where is package.json in weather-app" → findFiles target "package.json"; "is my mac hot" → getSystemStats;
         "hi" / "hello" / "how are you" → chat; "thanks" → chat; "search for the tallest mountain" → webSearch query "tallest mountain";
-        "what is the capital of Japan" → webSearch query "capital of Japan"; "open youtube.com" → openInBrowser.
+        "what is the capital of Japan" → webSearch query "capital of Japan"; "open youtube.com" → openInBrowser;
+        "what's taking space in ~/Downloads" → largestFiles target "~/Downloads"; "find duplicate files in Downloads" → findDuplicates target "Downloads";
+        "which simulators do I have" → listDevices; "is my build done" → jobStatus.
         """
         if !c.projects.isEmpty { s += "\nKnown projects: \(c.projects.joined(separator: ", "))." }
         if !c.aliases.isEmpty { s += "\nLearned names: \(c.aliases.joined(separator: ", "))." }

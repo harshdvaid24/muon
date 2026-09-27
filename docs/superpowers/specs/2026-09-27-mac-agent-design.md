@@ -47,7 +47,7 @@ Tier 2 only loads when ResourceGate passes: thermalState ∈ {nominal, fair}, me
 ## Self-learning (bounded, load-reducing)
 SQLite at `~/Library/Application Support/Muon/memory.db`.
 - `intent_cache(key PK, tool, args_json, hits, last_used, ok)` — key = lowercased, whitespace-collapsed, punctuation-stripped query. Hit executes directly (still confirms non-auto tools). Invalidated on failure.
-- `aliases(term PK, path, hits, last_used)` — learned when a project/path resolution succeeds ("kathak" → ~/Work/kathak).
+- `aliases(term PK, path, hits, last_used)` — learned when a project/path resolution succeeds ("portfolio" → ~/Work/portfolio).
 - `usage(kind, name PK(kind,name), hits, last_used)` — app/path frecency for ranking + disambiguation; `kind='seq'` rows count repeated 2-step sequences.
 - `macros(name PK, steps_json, hits, last_used)` — saved on "save macro <name>" or accepted suggestion after a sequence repeats 3×.
 Bounds: ≤ 300 rows per table, frecency = hits × 0.5^(age_days/14), evict lowest on insert, prune on launch. Prompt injection fixed: top 15 aliases + top 10 apps. No embeddings, no fine-tune, no daemon, no timers.

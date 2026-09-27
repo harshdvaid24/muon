@@ -47,14 +47,19 @@ final class PaletteModel: ObservableObject {
     func submit() {
         pending?.decide(.cancel)
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty, !isBusy else { return }
+        guard !q.isEmpty else { return }
+        if isBusy { queued = q; return }   // run it as soon as the current request finishes
         if !rows.isEmpty, let action = rows[safe: selection]?.action, q == lastSubmitted {
             action(); return
         }
         lastSubmitted = q
         rows = []; answer = nil; note = nil; footer = nil; selection = 0
         isBusy = true
-        Task { await handler(q); isBusy = false }
+        Task {
+            await handler(q)
+            isBusy = false
+            if let next = queued { queued = nil; query = next; submit() }
+        }
     }
 
     func moveSelection(_ delta: Int) {
@@ -73,6 +78,7 @@ final class PaletteModel: ObservableObject {
     }
 
     private var lastSubmitted = ""
+    private var queued: String?
 }
 
 extension Array {

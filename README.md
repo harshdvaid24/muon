@@ -1,165 +1,199 @@
 <div align="center">
 
-<img src="docs/media/icon.png" width="120" alt="Muon icon">
+<img src="docs/media/icon.png" width="112" alt="Muon icon">
 
 # Muon
 
-**A local, offline AI agent for macOS.** Summon a Liquid Glass palette with a keystroke to open apps, find and manage files, control any app's menus, search the web, and answer quick questions — running on-device, with zero idle footprint.
+**A local AI agent for your Mac.** Press a key, say what you need, and Muon finds, cleans up, opens, builds and answers — on-device, with zero idle footprint.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-macOS%2026-lightgrey)
-![Swift](https://img.shields.io/badge/Swift-5-orange)
-![Node](https://img.shields.io/badge/Node-%E2%89%A520-green)
+![On-device](https://img.shields.io/badge/AI-on--device-8A2BE2)
+![MCP](https://img.shields.io/badge/tools-MCP-green)
 
-<img src="docs/media/demo.gif" width="720" alt="Muon demo">
+<img src="docs/media/demo.gif" width="640" alt="Muon demo: disk cleanup, duplicates, TODO sweep, safe file moves, simulator builds, memory hogs, device list, web answers">
+
+<sub>Real recording of Muon on the reproducible demo workspace · [HD video](docs/media/demo.mp4)</sub>
 
 </div>
 
-## Why Muon
+## What it does for you
 
-A muon is a fast, short-lived particle: it appears, does its thing, and is gone. Muon works the same way. It sits idle in your menu bar using almost no memory, loads a model only when you ask something, and unloads it when you're done. Your files, your commands, and (by default) your model never leave the Mac.
-
-- **On-device first.** Simple requests are answered by Apple's built-in model in about a second, using no app memory. A local LM Studio model is loaded only for multi-step reasoning, and only when your Mac can spare the memory.
-- **It learns, and gets cheaper.** Repeated commands are answered from a tiny local cache in milliseconds with no model at all. The more you use it, the less work it does.
-- **Safe by construction.** The model never gets a shell. Every action is a typed tool with a path policy; anything that changes your files or controls an app asks first.
-
-## Demo
-
-| Summon | Chat | Web search |
-|---|---|---|
-| ![idle](docs/media/idle.png) | ![chat](docs/media/chat.png) | ![web search](docs/media/websearch.png) |
-
-| Answer about your Mac | Confirm before acting |
+| | |
 |---|---|
-| ![answer](docs/media/answer.png) | ![confirm](docs/media/confirm.png) |
+| **Free up disk space** — *"what is taking space in ~/Downloads"* lists the biggest files, skipping `node_modules`, `Pods` and build folders. | ![largest files](docs/media/largest.png) |
+| **Find duplicates** — *"find duplicate files in ~/Downloads"* groups identical files and tells you how much space you'd get back. | ![duplicates](docs/media/duplicates.png) |
+| **Sweep your code** — *"search code for TODO in ~/Projects/weather-app"* shows every hit with its line; press ↩ to open the file. | ![todos](docs/media/todos.png) |
+| **Clean up safely** — *"move the screenshots in ~/Downloads into ~/Downloads/Archive"* lists the exact files and asks once. Deleting always means Trash. | ![cleanup](docs/media/cleanup_confirm.png) |
+| **Build & run** — *"run ~/Projects/weather-app on iPhone 17"* builds your React Native app on the simulator in the background and notifies you when it's done. | ![run on device](docs/media/run_confirm.png) |
+| **Find memory hogs** — *"which apps are using the most memory"* before your next build slows to a crawl. | ![memory](docs/media/memory.png) |
+| **Know your devices** — *"which simulators do I have"* lists iOS simulators, Android emulators and plugged-in phones. | ![devices](docs/media/devices.png) |
+| **Quick answers** — *"what is react native"* answers from the web without leaving your flow. | ![web](docs/media/web.png) |
+
+**Try exactly what the video shows:** `scripts/demo-workspace.sh` creates a throwaway `~/Documents/MuonDemo` with a sample app, TODOs, big files, duplicates and screenshots.
+
+## Everything you can ask
+
+Muon understands plain language. These are examples, not a fixed syntax.
+
+### Apps
+| Ask | What happens |
+|---|---|
+| `open xcode` · `open safari` | Launches or focuses the app |
+| `quit spotify` | Asks the app to quit (it can save first) — *asks you first* |
+| `which apps are using the most memory` | Running apps sorted by RAM |
+| `force quit <pid>` | Terminates a stuck process — *native confirmation dialog* |
+| `in safari open a new private window` | Runs any app's menu command (Safari ▸ File ▸ New Private Window) — *asks first, needs Accessibility* |
+| `what menus does notes have` | Lists an app's menu commands so you can drive it |
+
+### Files and folders
+| Ask | What happens |
+|---|---|
+| `find package.json in ~/Projects/weather-app` | Finds files by name |
+| `find pdfs about invoices` | Spotlight search by content, kind or date |
+| `show me ~/Projects/weather-app/README.md` | Reads a text file (first 20 KB) |
+| `what is inside ~/Downloads` | Lists a folder |
+| `reveal ~/Downloads/report.pdf in finder` | Shows it in Finder |
+| `open ~/Documents/plan.pdf` | Opens with the default app (never runs apps or scripts) |
+| `move the screenshots in ~/Downloads into ~/Downloads/Archive` | Exact file list, one confirmation |
+| `archive the pdfs on my desktop` | Moves them into `Desktop/Archive` |
+| `trash zips in downloads older than 30 days` | Moves matching files to the Trash |
+| `rename`, `copy`, `create folder` | Available to the planner, each confirmed |
+
+### Disk space
+| Ask | What happens |
+|---|---|
+| `what is taking space in ~/Downloads` | Largest files |
+| `find duplicate files in ~/Downloads` | Identical files and reclaimable space |
+| `how much disk space is free` | Disk, RAM, CPU load, battery and thermal state |
+
+### Projects and code
+| Ask | What happens |
+|---|---|
+| `list my projects` | Projects in `~/Projects` and `~/Work` with their type |
+| `open weather-app in vs code` · `open weather-app in xcode` | Opens the project in your editor |
+| `search code for FirebaseApp.configure` | ripgrep across your projects |
+| `search code for TODO in ~/Projects/weather-app` | Scoped to one folder |
+| `how many react native projects do I have and which use firebase?` | Multi-step: the local model plans and runs several searches |
+
+### Developer workflows
+| Ask | What happens |
+|---|---|
+| `which simulators do I have` | iOS simulators, Android emulators, connected devices |
+| `run ~/Projects/weather-app on iPhone 17` | Builds and launches a React Native app on the simulator — *background job* |
+| `run weather-app on pixel 9` | Boots the Android emulator and runs the app — *background job* |
+| `job status` · `is my build done` | Progress and logs of background builds; a notification arrives when each finishes |
+| `list the workflows in weather-app` | GitHub Actions workflows (via `gh`) |
+| `trigger the release workflow in weather-app on main` | Starts a workflow run — *native confirmation dialog, since releases are hard to undo* |
+| `show recent workflow runs in weather-app` | Status, result and link for recent runs |
+
+### Web and chat
+| Ask | What happens |
+|---|---|
+| `what is typescript` · `search the web for swift concurrency` | A short answer with its source |
+| `open github.com` | Opens it in your browser |
+| `hi` · `what can you do` | A one-line conversational reply, on-device |
+
+### Learning and shortcuts
+| Ask | What happens |
+|---|---|
+| *(repeat any request)* | Answered from local memory in milliseconds, with no model at all |
+| `save macro morning` | Saves your last multi-step actions; type `morning` to replay |
+| `agent: <anything>` | Forces the larger local model for a hard request |
+
+### Ways in
+| Where | How |
+|---|---|
+| Keyboard | `⌃⌥Space` opens the palette (change it in Settings) |
+| Menu bar | Click the icon; right-click for model status, macros and Settings |
+| Spotlight, Shortcuts, Siri | **Ask Muon**, **Open Project**, **Run Macro** |
+| Scripts, Raycast | `open "muon://ask?q=what%20is%20taking%20space%20in%20~/Downloads"` |
+| Terminal | `Muon.app/Contents/MacOS/Muon --query "…" [--yes] [--tier 2]` |
 
 ## How it works
 
 ```
-  ⌃⌥Space  ──▶  Liquid Glass palette
-                     │
-        ┌────────────┼─────────────────────────────┐
-        ▼            ▼                              ▼
-   Tier 0        Tier 1                         Tier 2
-   memory        Apple on-device model          LM Studio (MLX), on demand
-   (SQLite,      (~1 s, 0 app RAM,              (loaded only when the Mac can
-    0 ms)         single-step + chat)            afford it; auto-unloads)
-        └────────────┴──────────────┬────────────────┘
-                                     ▼
-                       mac-tools (TypeScript MCP server)
-                       typed tools · path policy · audit log
-                       spawned on demand, exits after 5 min idle
-                                     ▼
-                    files · apps · app menus · system · web
+  ⌃⌥Space ──▶ Liquid Glass palette
+                    │
+      ┌─────────────┼───────────────────────────┐
+      ▼             ▼                           ▼
+   Tier 0        Tier 1                      Tier 2
+   memory        Apple on-device model       LM Studio (MLX), on demand
+   0 ms          ~1 s, no app memory         only when the Mac can spare it,
+                 single steps + chat         unloads after 5 min
+      └─────────────┴─────────────┬─────────────┘
+                                  ▼
+                 mac-tools · TypeScript MCP server
+                 typed tools · path policy · audit log
+                 starts on demand, exits after 5 min idle
+                                  ▼
+          files · apps · menus · disk · simulators · GitHub · web
 ```
 
-The agent escalates only when it must: a cached command never touches a model, a simple one stays on-device, and the larger model runs only for genuinely multi-step work.
-
-## Requirements
-
-- **macOS 26** (Tahoe) on Apple Silicon.
-- **Apple Intelligence** enabled (for the on-device tier). Without it, requests fall through to LM Studio.
-- **Node ≥ 20** (`node -v`).
-- **Xcode 26** to build the app.
-- **[LM Studio](https://lmstudio.ai)** for the multi-step tier (optional but recommended), with its `lms` CLI.
-- `ripgrep` (`brew install ripgrep`) for code search.
+Common, well-defined requests (open, find, largest files, duplicates, code search, cleanup) are handled by the on-device tier or by deterministic parsers — fast and predictable. The local LLM only plans genuinely multi-step work.
 
 ## Install
 
-```bash
-# 1. Clone
-git clone https://github.com/harshdvaid24/muon.git
-cd muon
+Requirements: macOS 26 on Apple Silicon with Apple Intelligence on, Xcode 26, Node ≥ 20, `ripgrep` (`brew install ripgrep`). Optional: [LM Studio](https://lmstudio.ai) for multi-step planning, `gh` for GitHub Actions, Android SDK for emulators.
 
-# 2. Build the tool server
+```bash
+git clone https://github.com/harshdvaid24/muon.git && cd muon
 cd mac-tools && npm install && npm run build && cd ..
-
-# 3. Build and launch the app
-scripts/build.sh
-scripts/run.sh
+scripts/build.sh && scripts/run.sh
 ```
 
-Then, for the multi-step tier, download the local models once:
+Multi-step planning (optional, one time):
 
 ```bash
-lms get qwen/qwen3.5-9b@4bit --mlx -y     # main model (~6 GB)
-lms get qwen/qwen3.5-4b@4bit --mlx -y     # low-memory fallback (~3 GB)
-lms server start
+lms get qwen/qwen3.5-9b@4bit --mlx -y    # main model (~6 GB)
+lms get qwen/qwen3.5-4b@4bit --mlx -y    # low-memory fallback (~3 GB)
 ```
 
-Finally, in Muon (right-click the menu bar icon → **Settings**):
+Then right-click the menu bar icon → **Settings**: pick a hotkey, review allowed folders, and grant **Accessibility** if you want menu commands in other apps.
 
-1. **App control → Accessibility → Grant.** Needed only to run menu commands in other apps.
-2. **Hotkey.** Default is `⌃⌥Space`. Change it if another app owns it.
-3. **Allowed folders.** Defaults to `~/Projects ~/Work ~/Downloads ~/Documents ~/Desktop`.
-
-> Muon is unsigned (self-signed for local use). On first launch, right-click the app → **Open**, or allow it in System Settings → Privacy & Security.
-
-## Using it
-
-Press `⌃⌥Space` (or click the menu bar icon) and type:
-
-```
-open kathak in vs code
-find pdfs about invoices
-which apps are using the most memory
-quit spotify
-Safari new private window
-what is the capital of Japan
-how many react native projects do I have and which use firebase?
-hi
-```
-
-Other ways in:
-
-| Entry point | What |
-|---|---|
-| `⌃⌥Space` | palette, bottom-center |
-| Menu bar icon | palette under the icon; right-click for model status, macros, Settings |
-| Spotlight / Shortcuts / Siri | App Intents: **Ask Muon**, **Open Project**, **Run Macro** |
-| `open "muon://ask?q=open%20kathak"` | scripts, Raycast, Shortcuts |
-| `Muon.app/Contents/MacOS/Muon --query "…" [--yes] [--tier 2]` | headless; prints tier, tools, and answer |
+> Muon is ad-hoc signed for local use. On first launch, right-click the app → **Open**.
 
 ## Safety model
 
-- **No shell exists.** Every capability is a typed function that runs an allowlisted binary with argument arrays — never a command string.
-- **Path policy.** Every path is normalized, symlink-resolved, required to be inside an allowed folder, and rejected if it touches a protected one (`~/Library`, `~/.ssh`, `~/.aws`, `/System`, `/private`, …).
-- **Confirmations.** Read-only tools run automatically. Move, copy, rename, trash, quit, and menu commands ask first (with "Always allow in this folder"). Force-quitting a process is a separate modal. **Delete always means Trash**, never `rm`.
-- **App control** (`runMenuCommand`) drives menus only, requires Accessibility permission, and validates every menu title so it can never inject AppleScript.
-- **Network** is one dedicated, read-only tool (`webSearch`, via DuckDuckGo). Nothing else reaches the internet.
-- **Audit log** at `~/Library/Application Support/Muon/audit.jsonl` (30 days, paths only, never file contents).
-- **Machine protection.** The larger model loads only when thermal, memory, battery, and running builds allow; otherwise Muon stays on the small model or on-device and says why.
+- **No shell.** Every capability is a typed tool running an allowlisted binary with argument arrays — never a command string. Background jobs have their own short allowlist.
+- **Path policy.** Paths are normalized and symlink-resolved, must live in an allowed folder (`~/Projects ~/Work ~/Downloads ~/Documents ~/Desktop` by default), and protected locations (`~/Library`, `~/.ssh`, `/System`, …) are always refused. Symlinks, allowed roots themselves, and moving a folder into itself are refused for changes.
+- **You approve changes.** Reading runs freely. Moving, copying, renaming, trashing, quitting apps, menu commands and simulator builds ask first, with "Always allow in this folder". Force-quit and GitHub workflow triggers use a native confirmation dialog.
+- **Delete means Trash.** Nothing is ever permanently deleted.
+- **Opening never executes.** `open` refuses apps, scripts and executables.
+- **Network is one tool.** Only `webSearch` / `openInBrowser` go online (and `gh` for GitHub, when you ask).
+- **Audit log** of every tool call (paths only, never contents) at `~/Library/Application Support/Muon/audit.jsonl`, kept 30 days.
+- **Machine protection.** The larger model loads only when memory, thermal state, battery and running builds allow it.
 
-## How it learns
+## Learning, without the bloat
 
-A bounded SQLite store at `~/Library/Application Support/Muon/memory.db` holds an intent cache, learned project aliases, app/path frecency, and saved macros. Each table is capped at 300 rows with a 14-day half-life and is pruned at launch. There is no fine-tuning, no embeddings, and no background indexing — just enough memory to make repeated work free.
+A capped SQLite store (`memory.db`) keeps an intent cache, project aliases, app and folder frecency, and macros — 300 rows per table, 14-day half-life, pruned at launch. No fine-tuning, no embeddings, no background indexing. The more you use Muon, the more requests skip the model entirely.
 
-## The tool server elsewhere
+## Use the tools from other apps
 
-`mac-tools` is a standard MCP server (stdio), usable from any MCP client:
+`mac-tools` is a standard MCP server, so any MCP client can use the same safe tools:
 
 ```bash
-# Claude Code
-claude mcp add mac-tools -- node /absolute/path/to/muon/mac-tools/dist/index.js
+claude mcp add mac-tools -- node /path/to/muon/mac-tools/dist/index.js
 ```
 
-Tools: `searchFiles`, `findFiles`, `searchCode`, `readFile`, `listDirectory`, `listProjects`, `listRunningApps`, `getSystemStats`, `openApplication`, `openPath`, `revealInFinder`, `moveItems`, `copyItems`, `renameItem`, `createFolder`, `trashItems`, `quitApplication`, `killProcess`, `listMenus`, `runMenuCommand`, `webSearch`, `openInBrowser`.
+Tools: `searchFiles` `findFiles` `searchCode` `readFile` `listDirectory` `listProjects` `matchFiles` `largestFiles` `findDuplicates` `openApplication` `openPath` `revealInFinder` `moveItems` `copyItems` `renameItem` `createFolder` `trashItems` `quitApplication` `killProcess` `listRunningApps` `getSystemStats` `listMenus` `runMenuCommand` `listDevices` `runOnDevice` `jobStatus` `listWorkflows` `workflowRuns` `triggerWorkflow` `webSearch` `openInBrowser`
 
 ## Development
 
 ```bash
-cd mac-tools && npm test    # tool server tests (node --test)
-scripts/build.sh test       # app tests (Swift Testing)
-scripts/fixture.sh          # 20 real queries: tier + latency
+cd mac-tools && npm test     # tool server
+scripts/build.sh test        # app
+scripts/demo-workspace.sh    # sample workspace for manual testing
 ```
 
-Design notes live in [`docs/superpowers/`](docs/superpowers). See [CONTRIBUTING.md](CONTRIBUTING.md).
+Design notes: [`docs/superpowers`](docs/superpowers) · Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Known limitations
 
-- LM Studio ignores `--context-length` for the MLX Qwen models; set the context in LM Studio's model settings if you want a hard cap. The agent loop is bounded, so memory stays near the model weights.
-- The app is unsigned and targets macOS 26; CI builds and tests the tool server, while the app is built locally.
-- Menu control needs Accessibility permission, granted per bundle — re-grant if you rebuild under a new signature.
+- Run-on-device supports React Native projects; for native Xcode projects, Muon opens the workspace so you can press Run.
+- Android runs need an emulator created in Android Studio (or a connected phone).
+- LM Studio ignores `--context-length` for these MLX models; set a cap in LM Studio's model settings if you want one.
+- CI tests the tool server; the macOS 26 app is built locally.
 
 ## License
 

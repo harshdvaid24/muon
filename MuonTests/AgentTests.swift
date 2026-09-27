@@ -37,3 +37,26 @@ import Testing
         // On-device model may or may not be available in CI; either a chat answer or nothing, never a tool.
     }
 }
+
+@Suite struct ScopeAndRoutingTests {
+    @Test func explicitPathInQueryWins() async {
+        let s = await Agent.shared.resolveScope("weather-app", query: "search code for TODO in ~/Documents/MuonDemo please")
+        #expect(s == NSHomeDirectory() + "/Documents/MuonDemo")
+    }
+
+    @Test func folderWordsMapToHomeFolders() async {
+        #expect(await Agent.shared.resolveScope("Downloads", query: "biggest files in downloads") == NSHomeDirectory() + "/Downloads")
+        #expect(await Agent.shared.resolveScope("my desktop", query: "x") == NSHomeDirectory() + "/Desktop")
+        #expect(await Agent.shared.resolveScope("", query: "no scope here") == nil)
+    }
+
+    @Test func devRequestsEscalateToPlanner() {
+        for q in ["In my-app, fix the login crash and run it on iPhone 17", "run the app on pixel 9", "trigger the release workflow in my-app"] {
+            let lower = " " + q.lowercased() + " "
+            #expect(Agent.complexMarkers.contains { lower.contains($0) }, "\(q) should go to tier 2")
+        }
+        for simple in [" find duplicate files in downloads ", " which simulators do i have "] {
+            #expect(!Agent.complexMarkers.contains { simple.contains($0) }, "\(simple) has its own tool")
+        }
+    }
+}

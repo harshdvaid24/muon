@@ -96,3 +96,9 @@ test("mutating tools refuse an allowed root itself (sandboxed roots — never re
     assert.ok(await exists(ROOT));
   } finally { s2.close(); }
 });
+
+test("moveItems refuses moving a folder into itself", async () => {
+  await fs.mkdir(path.join(SANDBOX, "parent/Archive"), { recursive: true });
+  const r = await s.tool("moveItems", { paths: [path.join(SANDBOX, "parent")], destinationFolder: path.join(SANDBOX, "parent/Archive") });
+  assert.match(r.text, /^0\/1 moved[\s\S]*into itself/);
+});

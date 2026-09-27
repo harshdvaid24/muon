@@ -41,8 +41,29 @@ final class Agent {
 
     /// Phrases the 3B router cannot serve with one tool; they skip straight to tier 2.
     static let complexMarkers = [" and then ", " and which ", " which of ", " older than ", " newer than ", " larger than ", " bigger than ",
-                                 " smaller than ", " duplicate", " clean up ", " cleanup ", " organize ", " organise ", " compare ", " how many ",
-                                 " count ", " why ", " explain ", " summarize ", " summarise ", " what does ", " total size ", " each of "]
+                                 " smaller than ", " clean up ", " cleanup ", " organize ", " organise ", " compare ", " how many ",
+                                 " count ", " why ", " explain ", " summarize ", " summarise ", " what does ", " total size ", " each of ",
+                                 " on iphone", " in iphone", " on ipad", " on android", " on pixel", " in pixel", " on the simulator", " in the simulator",
+                                 " on simulator", " on the emulator", " on emulator",
+                                 " github", " workflow", " release", " deploy", " build and run", " run it "]
+
+    /// Known folder words the user may say instead of a path.
+    static let folderWords: [String: String] = ["downloads": "~/Downloads", "documents": "~/Documents", "desktop": "~/Desktop",
+                                                "projects": "~/Projects", "work": "~/Work"]
+
+    /// Folder a request is scoped to: an explicit ~/ or / path in the text wins, then the model's scope, then a folder word or project name.
+    func resolveScope(_ raw: String, query: String) async -> String? {
+        if let r = query.range(of: #"(~/|/)[^\s,;]+"#, options: .regularExpression) {
+            let token = String(query[r]).trimmingCharacters(in: CharacterSet(charactersIn: ".?!'\""))
+            return Settings.expand(token)
+        }
+        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !s.isEmpty else { return nil }
+        if s.hasPrefix("~") || s.hasPrefix("/") { return Settings.expand(s) }
+        let word = s.lowercased().replacingOccurrences(of: "my ", with: "").replacingOccurrences(of: " folder", with: "")
+        if let f = Self.folderWords[word] { return Settings.expand(f) }
+        return await resolver().resolve(s, memory: memory).first?.path
+    }
     static let notUnderstood = "I didn't understand that. Try: open <app>, find <files>, open <project> in <editor>, quit <app>, search the web, or ask about memory/disk. Prefix with “agent:” to force the larger model."
     static let greetings: Set<String> = ["hi", "hello", "hey", "yo", "hiya", "sup", "hi there", "hello there", "hey there", "howdy", "good morning", "good afternoon", "good evening", "thanks", "thank you", "thankyou", "thx", "ty", "how are you", "how are you doing", "whats up", "what can you do", "help", "who are you"]
     static let cancelledMarker = "[[cancelled]]"
@@ -56,6 +77,12 @@ final class Agent {
 
         if let macro = macro(for: q) {
             return await runMacro(macro, approver: approver, status: status)
+        }
+
+        // File cleanup is parsed deterministically: exact files, one confirmation, no model planning.
+        if forceTier == nil, let intent = CleanupIntent.parse(q),
+           let result = await runCleanup(intent, approver: approver, status: status) {
+            return finish(result, query: q)
         }
 
         // Small talk answers on-device, never as an app launch.
@@ -164,19 +191,32 @@ final class Agent {
         case .findFiles:
             let name = target.isEmpty ? searchText : target
             guard !name.isEmpty else { return nil }
-            return await single("findFiles", ["name": name], query: query, out: out, approver: approver, status: status)
+            var args: [String: Any] = ["name": name]
+            if let scope = await resolveScope(c.scope, query: query) { args["scope"] = scope }
+            return await single("findFiles", args, query: query, out: out, approver: approver, status: status)
 
         case .searchFiles:
             let text = searchText.isEmpty ? target : searchText
             guard !text.isEmpty else { return nil }
-            return await single("searchFiles", ["query": text], query: query, out: out, approver: approver, status: status)
+            var args: [String: Any] = ["query": text]
+            if let scope = await resolveScope(c.scope, query: query) { args["scope"] = scope }
+            return await single("searchFiles", args, query: query, out: out, approver: approver, status: status)
 
         case .searchCode:
             let pattern = searchText.isEmpty ? target : searchText
             guard !pattern.isEmpty else { return nil }
             var args: [String: Any] = ["pattern": pattern]
-            if !target.isEmpty, target != pattern, let p = await resolver().resolve(target, memory: memory).first { args["scope"] = p.path }
+            let rawScope = c.scope.isEmpty && target != pattern ? target : c.scope
+            if let scope = await resolveScope(rawScope, query: query) { args["scope"] = scope }
             return await single("searchCode", args, query: query, out: out, approver: approver, status: status)
+
+        case .largestFiles, .findDuplicates:
+            let folder = await resolveScope(c.scope.isEmpty ? target : c.scope, query: query) ?? Settings.expand("~/Downloads")
+            return await single(c.tool == .largestFiles ? "largestFiles" : "findDuplicates", ["path": folder],
+                                query: query, out: out, approver: approver, status: status)
+
+        case .listDevices: return await single("listDevices", [:], query: query, out: out, approver: approver, status: status)
+        case .jobStatus: return await single("jobStatus", [:], query: query, out: out, approver: approver, status: status)
 
         case .readFile:
             guard !target.isEmpty else { return nil }
@@ -230,6 +270,69 @@ final class Agent {
             learn?()
         }
         render(r, into: &out, openWith: args["app"] as? String)
+        return out
+    }
+
+    // MARK: Cleanup
+
+    /// Resolves the folder, finds the exact matching files, asks once, then moves or trashes them.
+    /// Returns nil when the folder can't be resolved, so the request falls through to normal routing.
+    func runCleanup(_ c: CleanupIntent, approver: Approver, status: @escaping (String) -> Void) async -> AgentOutput? {
+        guard let src = await resolveScope(c.source, query: "") else { return nil }
+        var out = AgentOutput()
+        out.tier = 1
+        var args: [String: Any] = ["folder": src]
+        if let k = c.kind { args["kind"] = k }
+        if let n = c.nameContains { args["nameContains"] = n }
+        if let d = c.olderThanDays { args["olderThanDays"] = d }
+        status("Finding files…")
+        let found = await execute("matchFiles", args, approver: approver, status: status)
+        guard found.ok else { out.results = [found]; out.answer = found.text; return out }
+        let files = found.text.split(separator: "\n").map(String.init).filter { $0.hasPrefix("~/") || $0.hasPrefix("/") }.map(Settings.expand)
+        let what = [c.kind, c.nameContains.map { "named “\($0)”" }].compactMap { $0 }.joined(separator: " ")
+        let age = c.olderThanDays.map { " older than \($0) days" } ?? ""
+        guard !files.isEmpty else { out.answer = "No \(what)\(age) in \(Self.short(src))."; return out }
+
+        if c.verb == .trash {
+            let r = await execute("trashItems", ["paths": files], approver: approver, status: status)
+            out.results = [r]
+            out.cancelled = r.cancelled
+            out.answer = r.cancelled ? "Cancelled." : r.text
+            return out
+        }
+
+        guard let rawDest = c.destination else { return nil }
+        let dest = rawDest == CleanupIntent.archiveMarker ? src + "/Archive" : (await resolveScope(rawDest, query: "") ?? Settings.expand(rawDest))
+        let needsFolder = !FileManager.default.fileExists(atPath: dest)
+        let moveArgs: [String: Any] = ["paths": files, "destinationFolder": dest]
+        let key = Permission.alwaysKey(tool: "moveItems", args: moveArgs)
+        if !Permission.isAlwaysAllowed(key) {
+            let (title, detail) = Permission.describe(tool: "moveItems", args: moveArgs)
+            let pending = PendingAction(icon: Permission.icon(for: "moveItems"), tool: "moveItems", args: moveArgs,
+                                        title: title + (needsFolder ? " (new folder)" : ""), detail: detail, destructive: false,
+                                        alwaysKey: key, alwaysLabel: key != nil ? "Always allow in \((src as NSString).lastPathComponent)" : nil)
+            switch await approver.approve(pending) {
+            case .cancel:
+                out.cancelled = true
+                out.answer = "Cancelled."
+                out.results = [ActionResult(tool: "moveItems", args: moveArgs, text: "Cancelled.", ok: false, cancelled: true)]
+                return out
+            case .allowAlways: Permission.rememberAlways(key)
+            case .allow: break
+            }
+        }
+        status("Moving \(files.count) files…")
+        do {
+            if needsFolder {
+                let (text, isError) = try await MCPClient.shared.call("createFolder", args: ["path": dest])
+                if isError { out.answer = text; return out }
+            }
+            let (text, isError) = try await MCPClient.shared.call("moveItems", args: moveArgs)
+            out.results = [ActionResult(tool: "moveItems", args: moveArgs, text: text, ok: !isError)]
+            out.answer = text
+        } catch {
+            out.answer = error.localizedDescription
+        }
         return out
     }
 
@@ -409,7 +512,17 @@ final class Agent {
                 var args: [String: Any] = ["path": abs]
                 if let app { args["app"] = app }
                 let type = line.split(separator: "\t").count > 1 ? String(line.split(separator: "\t")[1]) : (isDir.boolValue ? "folder" : "file")
-                let subtitle = pathPart == display ? Self.short(abs) : String(line.dropFirst(pathPart.count + 1).prefix(90))
+                let subtitle: String
+                if pathPart == line, line.count > display.count + 1 {
+                    // ripgrep "file:line:code" → "line 12 · code"
+                    let rest = line.dropFirst(display.count + 1)
+                    let parts = rest.split(separator: ":", maxSplits: 1).map(String.init)
+                    subtitle = parts.count == 2 && Int(parts[0]) != nil
+                        ? "line \(parts[0]) · \(parts[1].trimmingCharacters(in: .whitespaces).prefix(80))"
+                        : String(rest.prefix(90))
+                } else {
+                    subtitle = pathPart == display ? Self.short(abs) : String(line.dropFirst(pathPart.count + 1).prefix(90))
+                }
                 if exists {
                     let section = r.tool == "listProjects" ? "Projects" : (isDir.boolValue ? "Folders" : "Files")
                     out.suggestions.append(Suggestion(icon: Self.icon(forType: type), title: (abs as NSString).lastPathComponent + (isDir.boolValue ? "/" : ""),

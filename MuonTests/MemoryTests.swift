@@ -8,27 +8,27 @@ import Testing
     }
 
     @Test func normalizeCollapsesCaseWhitespacePunctuation() {
-        #expect(Memory.normalize("  Open  KATHAK, please!! ") == "open kathak please")
+        #expect(Memory.normalize("  Open  PORTFOLIO, please!! ") == "open portfolio please")
         #expect(Memory.normalize("???") == "")
     }
 
     @Test func intentCacheRoundTripAndInvalidate() throws {
         let m = try fresh()
-        m.cacheStore("Open Kathak", tool: "openPath", argsJSON: #"{"path":"~/Work/kathak"}"#)
-        let hit = m.cacheLookup("open kathak")
+        m.cacheStore("Open Portfolio", tool: "openPath", argsJSON: #"{"path":"~/Work/portfolio"}"#)
+        let hit = m.cacheLookup("open portfolio")
         #expect(hit?.tool == "openPath")
-        #expect(hit?.argsJSON.contains("kathak") == true)
-        m.cacheInvalidate("OPEN KATHAK")
-        #expect(m.cacheLookup("open kathak") == nil)
+        #expect(hit?.argsJSON.contains("portfolio") == true)
+        m.cacheInvalidate("OPEN PORTFOLIO")
+        #expect(m.cacheLookup("open portfolio") == nil)
     }
 
     @Test func aliasLearnAndRecall() throws {
         let m = try fresh()
-        #expect(m.alias("kathak") == nil)
-        m.learnAlias("kathak", path: "/Users/x/Work/kathak")
-        m.learnAlias("Kathak", path: "/Users/x/Work/kathak")
-        #expect(m.alias("kathak") == "/Users/x/Work/kathak")
-        #expect(m.topAliases(5).first?.term == "kathak")
+        #expect(m.alias("portfolio") == nil)
+        m.learnAlias("portfolio", path: "/Users/x/Work/portfolio")
+        m.learnAlias("Portfolio", path: "/Users/x/Work/portfolio")
+        #expect(m.alias("portfolio") == "/Users/x/Work/portfolio")
+        #expect(m.topAliases(5).first?.term == "portfolio")
     }
 
     @Test func evictionKeepsHighestFrecency() throws {
