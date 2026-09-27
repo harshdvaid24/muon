@@ -5,6 +5,7 @@ struct RoutingContext {
     var aliases: [String] = []
     var apps: [String] = []
     var projects: [String] = []
+    var hint: String?
 }
 
 /// Tier 1: Apple's on-device model. Zero app RAM (OS-managed), ~0.5 s, guided generation into `Command`.
@@ -75,6 +76,7 @@ enum FoundationTier {
         if !c.projects.isEmpty { s += "\nKnown projects: \(c.projects.joined(separator: ", "))." }
         if !c.aliases.isEmpty { s += "\nLearned names: \(c.aliases.joined(separator: ", "))." }
         if !c.apps.isEmpty { s += "\nFrequently used apps: \(c.apps.joined(separator: ", "))." }
+        if let h = c.hint { s += "\n\(h)" }
         return s
     }
 }

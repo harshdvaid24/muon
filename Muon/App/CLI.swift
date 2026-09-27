@@ -16,6 +16,16 @@ enum CLI {
     /// Returns true when the process should run headless; the caller still starts the run loop.
     static func runIfRequested() -> Bool {
         let args = CommandLine.arguments
+        if args.contains("--suggest") {
+            active = true
+            Task {
+                let rows = await Proactive.refresh(memory: Agent.shared.memory)
+                for r in rows { print("• \(r.title) — \(r.subtitle)  [\(r.action.kind) \(r.action.value)]") }
+                if rows.isEmpty { print("nothing to suggest right now") }
+                MCPClient.shared.stop(); exit(0)
+            }
+            return true
+        }
         if args.contains("--diagnose") {
             active = true
             Task {

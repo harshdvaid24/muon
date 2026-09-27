@@ -34,6 +34,8 @@ final class PaletteModel: ObservableObject {
     @Published var pending: Pending?
     @Published var isBusy = false
     @Published var focusRequest = 0
+    /// Shown while the query is empty: what Muon noticed for you.
+    @Published var idleRows: [Row] = []
 
     /// Set by the agent wiring. Receives the submitted query.
     var handler: (String) async -> Void = { _ in }

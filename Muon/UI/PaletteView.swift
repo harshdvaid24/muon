@@ -7,7 +7,8 @@ struct PaletteView: View {
     @FocusState private var focused: Bool
     @Namespace private var glassNS
 
-    private var hasBody: Bool { !model.rows.isEmpty || model.answer != nil || model.result != nil || model.status != nil || model.pending != nil || model.note != nil }
+    private var showIdle: Bool { model.query.isEmpty && model.rows.isEmpty && model.answer == nil && model.result == nil && model.pending == nil && model.status == nil && !model.idleRows.isEmpty }
+    private var hasBody: Bool { !model.rows.isEmpty || model.answer != nil || model.result != nil || model.status != nil || model.pending != nil || model.note != nil || showIdle }
 
     var body: some View {
         GlassEffectContainer(spacing: 12) {
@@ -20,6 +21,7 @@ struct PaletteView: View {
                     if let result = model.result { resultBlock(result) }
                     if let answer = model.answer { answerBlock(answer) }
                     if !model.rows.isEmpty { results }
+                    if showIdle { idleList }
                     if let note = model.note { noteRow(note) }
                     if let footer = model.footer, model.pending == nil, model.status == nil { footerRow(footer) }
                 }
@@ -131,6 +133,18 @@ struct PaletteView: View {
             Spacer()
         }
         .padding(.horizontal, 22).padding(.bottom, 12)
+    }
+
+    private var idleList: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("FOR YOU").font(.system(size: 11, weight: .semibold)).tracking(0.6).foregroundStyle(.secondary).padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 4)
+            ForEach(Array(model.idleRows.enumerated()), id: \.element.id) { index, row in
+                ResultRow(row: row, selected: index == model.selection)
+                    .contentShape(.rect)
+                    .onTapGesture { row.action?() }
+            }
+        }
+        .padding(.horizontal, 8).padding(.bottom, 8)
     }
 
     private var results: some View {

@@ -76,7 +76,7 @@ final class Agent {
     static let greetings: Set<String> = ["hi", "hello", "hey", "yo", "hiya", "sup", "hi there", "hello there", "hey there", "howdy", "good morning", "good afternoon", "good evening", "thanks", "thank you", "thankyou", "thx", "ty", "how are you", "how are you doing", "whats up", "what can you do", "help", "who are you"]
     static let cancelledMarker = "[[cancelled]]"
 
-    func run(_ query: String, approver: Approver, status: @escaping (String) -> Void, forceTier: Int? = nil) async -> AgentOutput {
+    func run(_ query: String, approver: Approver, status: @escaping (String) -> Void, forceTier: Int? = nil, translated: Bool = false) async -> AgentOutput {
         var q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         var out = AgentOutput()
         var forceTier = forceTier
@@ -85,6 +85,48 @@ final class Agent {
 
         if let macro = macro(for: q) {
             return await runMacro(macro, approver: approver, status: status)
+        }
+
+        // "undo" reverses the last automated move or rename.
+        if ["undo", "undo last", "undo that", "revert"].contains(Memory.normalize(q)) {
+            return await runUndo(approver: approver, status: status)
+        }
+
+        // "every monday archive the screenshots…" creates a rule (only deterministic cleanups qualify).
+        if forceTier == nil, let (query, schedule) = Rules.parse(q) {
+            let rule = Rules.add(query: query, schedule: schedule)
+            out.tier = 0
+            out.answer = "Rule saved: “\(rule.query)” \(schedule.label). It runs with a notification and can be undone. Manage rules in Settings."
+            Proactive.invalidate()
+            return out
+        }
+
+        // Optional Laya pre-router: fast typed decision + language detection.
+        var layaHint: Laya.RouteHint?
+        if forceTier == nil, !translated, await Laya.isReachable() {
+            layaHint = await Laya.route(q)
+            if let h = layaHint, h.multilingual, await LMStudioTier.isReachable() {
+                status("Translating your request…")
+                if let en = try? await LMStudioTier.complete(system: "Translate the user's request into plain English for a Mac assistant. Output only the translation.", user: q, status: status),
+                   !en.isEmpty, en.lowercased() != q.lowercased() {
+                    var o = await run(en, approver: approver, status: status, forceTier: forceTier, translated: true)
+                    o.note = (o.note.map { $0 + "\n" } ?? "") + "Understood as: “\(en)”"
+                    return o
+                }
+            }
+            if let h = layaHint, h.multistep >= 0.85, h.probability < 0.9 {
+                return finish(await tier2(q, approver: approver, status: status, out: out), query: q)
+            }
+        }
+
+        // Localization files: "translate ~/app/en.json to hindi and gujarati".
+        if forceTier == nil, let l = Localization.parseIntent(q) {
+            return finish(await runLocalize(l, approver: approver, status: status), query: q)
+        }
+
+        // Screenshots, images, web pages and crash logs.
+        if forceTier == nil, let m = MediaIntent.parse(q) {
+            return finish(await runMedia(m, query: q, approver: approver, status: status), query: q)
         }
 
         // Writing help ("fix grammar", "translate to hindi", "summarize this") is parsed deterministically too.
@@ -125,7 +167,9 @@ final class Agent {
 
         if FoundationTier.isAvailable {
             status("Understanding…")
-            if let cmd = try? await FoundationTier.route(q, context: await routingContext()) {
+            var ctx = await routingContext()
+            if let h = layaHint, h.probability >= 0.8 { ctx.hint = "A fast classifier suggests this request is about: \(h.family) (\(Int(h.probability * 100))% sure)." }
+            if let cmd = try? await FoundationTier.route(q, context: ctx) {
                 let confident = cmd.confidence >= Settings.confidenceThreshold
                 if cmd.tool == .unknown {
                     out.tier = 1
@@ -312,6 +356,157 @@ final class Agent {
             let text = try await TextTools.generate(instruction: w.instruction, input: input, status: status)
             out.result = TextResult(text: text, label: w.label, source: sourceLabel)
             memory?.bump(kind: "writing", name: w.label)
+        } catch {
+            out.answer = error.localizedDescription
+        }
+        return out
+    }
+
+    // MARK: Undo
+
+    func runUndo(approver: Approver, status: @escaping (String) -> Void) async -> AgentOutput {
+        var out = AgentOutput()
+        guard let rec = Undo.last else { out.answer = "Nothing to undo."; return out }
+        let plan = Undo.plan(rec)
+        guard !plan.isEmpty else { Undo.clear(); out.answer = "Nothing left to undo from “\(rec.title)”."; return out }
+        let pending = PendingAction(icon: "arrow.uturn.backward", tool: "moveItems", args: ["paths": plan.map(\.from)], title: "Undo “\(rec.title)” (\(plan.count) item\(plan.count == 1 ? "" : "s"))",
+                                    detail: plan.map { "\(Self.short($0.from)) → \(Self.short($0.toFolder))/" }.joined(separator: "\n"), destructive: false, alwaysKey: nil, alwaysLabel: nil)
+        if case .cancel = await approver.approve(pending) { out.cancelled = true; out.answer = "Cancelled."; return out }
+        var done = 0
+        for (from, folder) in plan {
+            let original = rec.moves.first { $0.to == from }?.from ?? ((folder as NSString).appendingPathComponent((from as NSString).lastPathComponent))
+            let sameFolder = (from as NSString).deletingLastPathComponent == folder
+            let result: (String, Bool)?
+            if sameFolder { result = try? await MCPClient.shared.call("renameItem", args: ["path": from, "newName": (original as NSString).lastPathComponent]) }
+            else { result = try? await MCPClient.shared.call("moveItems", args: ["paths": [from], "destinationFolder": folder]) }
+            if let r = result, !r.1 { done += 1 }
+        }
+        Undo.clear()
+        out.answer = "Restored \(done) of \(plan.count)."
+        return out
+    }
+
+    // MARK: Localization
+
+    func runLocalize(_ l: Localization.Intent, approver: Approver, status: @escaping (String) -> Void) async -> AgentOutput {
+        var out = AgentOutput()
+        out.tier = 1
+        do {
+            let real = try PathPolicy.resolve(l.path)
+            guard let fmt = Localization.format(for: real) else { out.answer = "Supported localization files: .json, .strings, .arb"; return out }
+            let text = try Documents.text(at: real)
+            let ents = try Localization.entries(text, format: fmt)
+            guard !ents.isEmpty else { out.answer = "No translatable strings found in \(Self.short(real))."; return out }
+            var files: [(path: String, content: String)] = []
+            for lang in l.languages {
+                status("Translating \(ents.count) strings to \(lang.capitalized)…")
+                let tr = try await Localization.translate(ents, to: lang.capitalized) { try await TextTools.generate(instruction: "", input: $0) }
+                let code = Localization.languageCodes[lang] ?? String(lang.prefix(2))
+                files.append((Localization.outputPath(source: real, code: code), try Localization.render(text, format: fmt, translations: tr)))
+            }
+            let pending = PendingAction(icon: "globe", tool: "writeTextFile", args: ["paths": files.map(\.path)],
+                                        title: "Write \(files.count) translated file\(files.count == 1 ? "" : "s") (\(ents.count) strings each)",
+                                        detail: files.map { Self.short($0.path) }.joined(separator: "\n"), destructive: false, alwaysKey: nil, alwaysLabel: nil)
+            if case .cancel = await approver.approve(pending) { out.cancelled = true; out.answer = "Cancelled."; return out }
+            var written: [String] = []
+            for f in files {
+                let (msg, isError) = try await MCPClient.shared.call("writeTextFile", args: ["path": f.path, "content": f.content, "overwrite": true])
+                out.results.append(ActionResult(tool: "writeTextFile", args: ["path": f.path], text: msg, ok: !isError))
+                if !isError { written.append(Self.short(f.path)) }
+            }
+            out.answer = "Translated \(ents.count) strings into \(l.languages.map(\.capitalized).joined(separator: ", ")).\n" + written.joined(separator: "\n")
+            memory?.bump(kind: "writing", name: "Localize")
+        } catch { out.answer = error.localizedDescription }
+        return out
+    }
+
+    // MARK: Media
+
+    func runMedia(_ m: MediaIntent, query: String, approver: Approver, status: @escaping (String) -> Void) async -> AgentOutput {
+        var out = AgentOutput()
+        out.tier = 1
+        do {
+            switch m {
+            case .ocr(let spec):
+                let p = try VisionTools.imagePath(from: spec)
+                status("Reading \((p as NSString).lastPathComponent)…")
+                let text = try VisionTools.ocr(URL(fileURLWithPath: p))
+                if text.isEmpty { out.answer = "No text found in \(Self.short(p))." }
+                else { out.result = TextResult(text: text, label: "Text from image", source: (p as NSString).lastPathComponent) }
+
+            case .explainScreenshot(let spec):
+                let p = try VisionTools.imagePath(from: spec)
+                status("Reading \((p as NSString).lastPathComponent)…")
+                let text = try VisionTools.ocr(URL(fileURLWithPath: p))
+                guard !text.isEmpty else { out.answer = "No text found in \(Self.short(p)) to explain."; return out }
+                let explanation = try await TextTools.generate(instruction: WritingIntent.explainInstruction, input: text, status: status)
+                out.result = TextResult(text: explanation, label: "Explanation", source: (p as NSString).lastPathComponent)
+
+            case .describe(let spec, let question):
+                let p = try VisionTools.imagePath(from: spec)
+                let prompt = question.isEmpty ? "Describe this image precisely: what it shows, any text, and anything that looks wrong." : question
+                let text = try await VisionTools.describe([p], prompt: prompt, status: status)
+                out.result = TextResult(text: text, label: question.isEmpty ? "Description" : "Answer", source: (p as NSString).lastPathComponent)
+                out.model = "local vision model"
+
+            case .compare(let a, let b):
+                let p1 = try VisionTools.imagePath(from: a), p2 = try VisionTools.imagePath(from: b)
+                let text = try await VisionTools.describe([p1, p2], prompt: "Image 1 is the actual result, image 2 is the expected design. List every visible difference (layout, spacing, colors, text, missing or extra elements) as short bullets, most important first.", status: status)
+                out.result = TextResult(text: text, label: "Differences", source: "\((p1 as NSString).lastPathComponent) vs \((p2 as NSString).lastPathComponent)")
+                out.model = "local vision model"
+
+            case .renameScreenshots(let folder):
+                let dir = try PathPolicy.resolve(folder ?? VisionTools.screenshotsFolder())
+                let props = try await VisionTools.proposeRenames(in: dir, status: status)
+                guard !props.isEmpty else { out.answer = "No screenshots to rename in \(Self.short(dir))."; return out }
+                let detail = props.map { "\(($0.from as NSString).lastPathComponent) → \($0.to)" }.joined(separator: "\n")
+                let pending = PendingAction(icon: "pencil", tool: "renameItem", args: ["folder": dir], title: "Rename \(props.count) screenshot\(props.count == 1 ? "" : "s") by content",
+                                            detail: detail, destructive: false, alwaysKey: nil, alwaysLabel: nil)
+                switch await approver.approve(pending) {
+                case .cancel: out.cancelled = true; out.answer = "Cancelled."; return out
+                default: break
+                }
+                var done = 0; var failures: [String] = []
+                for (from, to) in props {
+                    let (text, isError) = try await MCPClient.shared.call("renameItem", args: ["path": from, "newName": to])
+                    if isError { failures.append(text) } else { done += 1 }
+                    out.results.append(ActionResult(tool: "renameItem", args: ["path": from, "newName": to], text: text, ok: !isError))
+                }
+                out.answer = "Renamed \(done) of \(props.count) screenshots." + (failures.isEmpty ? "" : "\n" + failures.joined(separator: "\n"))
+                memory?.bump(kind: "writing", name: "Rename screenshots")
+
+            case .webPage(let url, let instruction):
+                let r = await execute("readWebPage", ["url": url], approver: approver, status: status)
+                out.results = [r]
+                guard r.ok else { out.answer = r.text; return out }
+                let text = try await TextTools.generate(instruction: instruction, input: r.text, status: status)
+                out.result = TextResult(text: text, label: instruction.contains("Summarize") ? "Summary" : "Answer", source: URL(string: url)?.host ?? url)
+
+            case .transcribe(let p):
+                let text = try await Transcriber.transcribe(p, status: status)
+                out.result = TextResult(text: text, label: "Transcript", source: (p as NSString).lastPathComponent)
+
+            case .meetingNotes(let p):
+                let text = try await Transcriber.transcribe(p, status: status)
+                let notes = try await Transcriber.meetingNotes(text, status: status)
+                out.result = TextResult(text: notes + "\n\n— Transcript —\n" + text, label: "Meeting notes", source: (p as NSString).lastPathComponent)
+
+            case .receipts(let folder):
+                let r = try await Receipts.total(folder: folder, status: status)
+                out.result = TextResult(text: r.summary, label: "Expenses", source: (folder as NSString).lastPathComponent)
+                let dir = try PathPolicy.resolve(folder)
+                let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
+                let csvPath = dir + "/receipts-\(f.string(from: Date())).csv"
+                let save = await execute("writeTextFile", ["path": csvPath, "content": r.csv, "overwrite": true], approver: approver, status: status)
+                out.results = [save]
+                if save.ok { out.note = "Saved \(Self.short(csvPath))" } else if !save.cancelled { out.note = save.text }
+
+            case .crash(let app):
+                let reports = CrashLogs.recent(app: app)
+                guard let first = reports.first else { out.answer = "No crash reports in the last 48 hours\(app.map { " for \($0)" } ?? "")."; return out }
+                let explanation = try await TextTools.generate(instruction: "This is a macOS/iOS crash report summary. Say which process crashed, what the crash was, the most likely cause, and what to check first. Be concrete and brief.", input: first.summary, status: status)
+                out.result = TextResult(text: explanation + "\n\n— from \(first.file)" + (reports.count > 1 ? " (+\(reports.count - 1) more)" : ""), label: "Crash explanation", source: first.file)
+            }
         } catch {
             out.answer = error.localizedDescription
         }

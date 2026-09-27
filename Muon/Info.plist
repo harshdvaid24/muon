@@ -44,5 +44,7 @@
 	<string>Muon asks apps to quit and runs menu commands you request.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Muon transcribes audio files you choose, on-device.</string>
 </dict>
 </plist>

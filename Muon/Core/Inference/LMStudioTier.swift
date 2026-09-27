@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 /// Tier 2: LM Studio (MLX) via the OpenAI-compatible API with tool calling. Model is JIT-loaded and
@@ -104,6 +105,40 @@ enum LMStudioTier {
         let resp = try await post("/v1/chat/completions", body)
         guard let msg = (resp["choices"] as? [[String: Any]])?.first?["message"] as? [String: Any], let text = msg["content"] as? String else { throw LMError.badResponse }
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Vision: send one or more images (downscaled JPEG) with a prompt to the local VLM.
+    static func vision(imagePaths: [String], prompt: String, status: @escaping (String) -> Void) async throws -> String {
+        guard await ensureServer() else { throw LMError.unreachable }
+        let gate = ResourceGate.check()
+        var model = gate.ok && !gate.useSmall ? Settings.model : Settings.fallbackModel
+        let models = await availableModels()
+        if !models.isEmpty, !models.contains(model) { model = models.first { $0.lowercased().contains("qwen") } ?? model }
+        await ensureLoaded(model, status: status)
+        status("Looking at the image\(imagePaths.count > 1 ? "s" : "")…")
+        var content: [[String: Any]] = [["type": "text", "text": prompt]]
+        for p in imagePaths {
+            guard let jpeg = jpegData(path: p, maxSide: 1280) else { throw LMError.http(0, "could not read image \(p)") }
+            content.append(["type": "image_url", "image_url": ["url": "data:image/jpeg;base64," + jpeg.base64EncodedString()]])
+        }
+        let body: [String: Any] = ["model": model, "messages": [["role": "user", "content": content]], "temperature": 0.2, "max_tokens": 1200,
+                                   "stream": false, "ttl": Settings.modelTTL, "chat_template_kwargs": ["enable_thinking": false]]
+        let resp = try await post("/v1/chat/completions", body)
+        guard let msg = (resp["choices"] as? [[String: Any]])?.first?["message"] as? [String: Any], let text = msg["content"] as? String else { throw LMError.badResponse }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func jpegData(path: String, maxSide: CGFloat) -> Data? {
+        guard let img = NSImage(contentsOfFile: path), let cg = img.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+        let w = CGFloat(cg.width), h = CGFloat(cg.height), scale = min(1, maxSide / max(w, h))
+        let size = NSSize(width: w * scale, height: h * scale)
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height), bitsPerSample: 8, samplesPerPixel: 4,
+                                         hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        NSImage(cgImage: cg, size: NSSize(width: w, height: h)).draw(in: NSRect(origin: .zero, size: size))
+        NSGraphicsContext.restoreGraphicsState()
+        return rep.representation(using: .jpeg, properties: [.compressionFactor: 0.8])
     }
 
     /// Runs the tool-calling loop. `execute` performs a tool call (with permission) and returns its text.

@@ -15,6 +15,10 @@ struct SettingsView: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
     @State private var macros = Agent.shared.memory?.macros() ?? []
+    @State private var rules = Rules.all
+    @AppStorage(ScreenshotWatcher.settingKey) private var autoName = false
+    @AppStorage("layaEnabled") private var layaEnabled = true
+    @AppStorage("layaURL") private var layaURL = "http://127.0.0.1:8765"
     @AppStorage("hotkey") private var hotkey = HotKey.Preset.shiftOptSpace.rawValue
     @AppStorage("sounds") private var sounds = true
     @State private var axTrusted = AXIsProcessTrusted()
@@ -80,6 +84,28 @@ struct SettingsView: View {
                 TextField("Node binary", text: $nodePath, prompt: Text(Settings.probeNode() ?? "/usr/local/bin/node"))
                 TextField("mac-tools index.js", text: $mcpServerPath, prompt: Text(Settings.mcpServerPath))
                 Button("Forget “always allow” choices") { Settings.d.removeObject(forKey: Settings.Key.alwaysAllow) }
+            }
+            Section("Automation") {
+                Toggle("Name new screenshots by their content", isOn: $autoName)
+                    .onChange(of: autoName) { ScreenshotWatcher.shared.apply() }
+                Text("Watches your screenshots folder; each new screenshot is renamed like 2026-08-01-invoice-acme.png. Type “undo” to revert the last one.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if rules.isEmpty {
+                    Text("No rules yet. Ask “every monday move the screenshots in ~/Downloads older than 30 days into ~/Downloads/Archive”, or accept a suggestion in the palette.").foregroundStyle(.secondary)
+                }
+                ForEach(rules) { r in
+                    HStack {
+                        VStack(alignment: .leading) { Text(r.query).lineLimit(1); Text(r.schedule.label).font(.caption).foregroundStyle(.secondary) }
+                        Spacer()
+                        Button("Delete", role: .destructive) { Rules.remove(id: r.id); rules = Rules.all }
+                    }
+                }
+            }
+            Section("Laya (optional fast decisions)") {
+                Toggle("Use Laya when running", isOn: $layaEnabled)
+                TextField("Server URL", text: $layaURL)
+                Text("pip install \"laya[serve]\" then LAYA_PORT=8765 laya-serve. Adds ~150 ms routing hints and lets you type requests in 100+ languages (translated via LM Studio).")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Macros") {
                 if macros.isEmpty {

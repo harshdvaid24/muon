@@ -11,7 +11,7 @@ import { HOME } from "./paths.js";
 export const JOBS_DIR = path.join(DATA_DIR, "jobs");
 export const ANDROID = process.env.ANDROID_HOME || path.join(HOME, "Library/Android/sdk");
 /** Only these binaries may run inside a job (resolved on the job PATH below). */
-export const JOB_BINS = new Set(["npx", "node", "xcrun", "xcodebuild", "emulator", "adb", "gh", "pod"]);
+export const JOB_BINS = new Set(["npx", "node", "xcrun", "xcodebuild", "emulator", "adb", "gh", "pod", "gradlew"]);
 const KEEP_JOBS = 40;
 
 export interface Step { bin: string; args: string[]; cwd?: string; background?: boolean; label?: string }
@@ -28,7 +28,7 @@ export function jobEnv(): Record<string, string> {
 }
 
 export async function startJob(title: string, kind: string, cwd: string, steps: Step[], notify = true): Promise<Job> {
-  for (const s of steps) if (!JOB_BINS.has(s.bin)) throw new Error(`binary not allowed in jobs: ${s.bin}`);
+  for (const s of steps) if (!JOB_BINS.has(s.bin) && !JOB_BINS.has(path.basename(s.bin))) throw new Error(`binary not allowed in jobs: ${s.bin}`);
   await fsp.mkdir(JOBS_DIR, { recursive: true });
   const id = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14) + "-" + randomUUID().slice(0, 4);
   const job: Job = { id, title, kind, cwd, steps, status: "running", startedAt: new Date().toISOString(), log: path.join(JOBS_DIR, `${id}.log`), notify };

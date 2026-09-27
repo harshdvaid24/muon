@@ -37,6 +37,7 @@ struct WritingIntent: Equatable {
 
     static func parse(_ raw: String) -> WritingIntent? {
         var q = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if q.contains("://") { return nil }
         // "translate to french: hello there" → inline text after the first colon
         var inline: String?
         if let colon = q.firstIndex(of: ":"), q.distance(from: q.startIndex, to: colon) < 60 {

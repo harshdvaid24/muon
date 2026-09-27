@@ -33,6 +33,7 @@ targets:
           - CFBundleURLName: com.harshvaid.Muon
             CFBundleURLSchemes: [muon]
         NSAppleEventsUsageDescription: Muon asks apps to quit and runs menu commands you request.
+        NSSpeechRecognitionUsageDescription: Muon transcribes audio files you choose, on-device.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
     entitlements:

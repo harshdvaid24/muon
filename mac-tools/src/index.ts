@@ -11,6 +11,7 @@ import { registerControlTools } from "./tools/control.js";
 import { registerWebTools } from "./tools/web.js";
 import { registerDiskTools } from "./tools/disk.js";
 import { registerDevTools } from "./tools/dev.js";
+import { registerDevOpsTools } from "./tools/devops.js";
 import { pruneJobs } from "./jobs.js";
 
 export const server = new McpServer({ name: "mac-tools", version: "0.1.0" });
@@ -25,6 +26,7 @@ registerControlTools(server);
 registerWebTools(server);
 registerDiskTools(server);
 registerDevTools(server);
+registerDevOpsTools(server);
 
 process.stdin.on("end", () => process.exit(0));
 void rotateAudit();

@@ -56,6 +56,14 @@ final class Memory {
 
     func cacheInvalidate(_ q: String) { db.run("DELETE FROM intent_cache WHERE key = ?", [Self.normalize(q)]) }
 
+    /// Most-used cached requests (by frecency) with their hit counts.
+    func topCached(_ n: Int) -> [(key: String, hits: Int)] {
+        ranked(db.rows("SELECT key, hits, last_used FROM intent_cache")).prefix(n).compactMap { r in
+            guard let k = r["key"] as? String else { return nil }
+            return (k, (r["hits"] as? Int) ?? 1)
+        }
+    }
+
     // MARK: Aliases (term → path)
 
     func alias(_ term: String) -> String? {

@@ -46,9 +46,17 @@ enum PathPolicy {
         return real
     }
 
+    /// Every `~/…` or `/…` token in free text, in order.
+    static func paths(in text: String) -> [String] {
+        guard let re = try? NSRegularExpression(pattern: #"(?<![\w:/])(~/|/)[^\s,;'":]+"#) else { return [] }
+        return re.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap { m in
+            Range(m.range, in: text).map { String(text[$0]).trimmingCharacters(in: CharacterSet(charactersIn: ".?!:")) }
+        }
+    }
+
     /// First `~/…` or `/…` token in free text, if any.
     static func firstPath(in text: String) -> String? {
-        guard let r = text.range(of: #"(?<![\w])(~/|/)[^\s,;'"]+"#, options: .regularExpression) else { return nil }
-        return String(text[r]).trimmingCharacters(in: CharacterSet(charactersIn: ".?!"))
+        guard let r = text.range(of: #"(?<![\w])(~/|/)[^\s,;'":]+"#, options: .regularExpression) else { return nil }
+        return String(text[r]).trimmingCharacters(in: CharacterSet(charactersIn: ".?!:"))
     }
 }

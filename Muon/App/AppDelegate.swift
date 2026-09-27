@@ -190,6 +190,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func wireAgent() {
         let m = palette.model
         m.handler = { [weak self] q in await self?.handle(q) }
+        palette.onShow = { [weak self] in self?.refreshProactive() }
+        ScreenshotWatcher.shared.apply()
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
+            Task { await Rules.runDue(agent: Agent.shared) }
+        }
+        Task { await Rules.runDue(agent: Agent.shared) }
         m.onCopy = { text in TextTools.copy(text); Sound.play(.success) }
         m.onPaste = { [weak self] text in self?.palette.pasteIntoPreviousApp(text) }
         m.canPaste = AXIsProcessTrusted()
@@ -234,6 +240,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !out.cancelled, out.suggestions.isEmpty, !out.results.isEmpty, out.results.allSatisfy(\.ok),
            out.results.contains(where: { Self.closesPalette($0.tool) }) {
             dismissSoon()
+        }
+    }
+
+    /// "For you" rows: cached instantly, refreshed in the background at most once a day.
+    private func refreshProactive() {
+        let m = palette.model
+        func rows(_ s: [ProactiveSuggestion]) -> [PaletteModel.Row] {
+            s.map { sug in
+                PaletteModel.Row(icon: sug.icon, title: sug.title, subtitle: sug.subtitle, section: nil) { [weak self] in
+                    guard let self else { return }
+                    switch sug.action {
+                    case .query(let q): m.query = q; m.submit()
+                    case .rule(let q): m.query = "every monday " + q; m.submit()
+                    case .undo: m.query = "undo"; m.submit()
+                    }
+                }
+            }
+        }
+        if let cached = Proactive.cached() { m.idleRows = rows(cached); return }
+        m.idleRows = rows(Proactive.clipboardSuggestions() + Proactive.undoSuggestion())
+        Task.detached(priority: .utility) {
+            let fresh = await Proactive.refresh(memory: Agent.shared.memory)
+            await MainActor.run { m.idleRows = rows(fresh) }
         }
     }
 

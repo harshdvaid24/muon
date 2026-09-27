@@ -21,7 +21,7 @@ enum TextTools {
             do { return try await onDevice(instruction: instruction, input: text) }
             catch let e as LanguageModelSession.GenerationError {
                 switch e {
-                case .exceededContextWindowSize: break            // fall through to the bigger model / chunking
+                case .exceededContextWindowSize, .unsupportedLanguageOrLocale: break   // fall through to the local model
                 case .guardrailViolation, .refusal: if await LMStudioTier.isReachable() { break } else { throw IntelligenceError.refused("the on-device model won't handle this text; start LM Studio to use the local model instead.") }
                 default: throw e
                 }

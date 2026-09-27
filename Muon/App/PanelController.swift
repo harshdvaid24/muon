@@ -69,7 +69,11 @@ final class PanelController: NSObject, NSWindowDelegate {
         panel.makeKeyAndOrderFront(nil)
         model.focusRequest += 1
         Sound.play(.appear)
+        onShow?()
     }
+
+    /// Set by the app: refresh "for you" rows, run due rules.
+    var onShow: (() -> Void)?
 
     func hide() {
         model.pending?.decide(.cancel)
