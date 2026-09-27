@@ -14,7 +14,7 @@ struct SettingsView: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
     @State private var macros = Agent.shared.memory?.macros() ?? []
-    @AppStorage("hotkey") private var hotkey = HotKey.Preset.ctrlOptSpace.rawValue
+    @AppStorage("hotkey") private var hotkey = HotKey.Preset.shiftOptSpace.rawValue
     @AppStorage("sounds") private var sounds = true
     @State private var axTrusted = AXIsProcessTrusted()
 

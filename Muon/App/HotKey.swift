@@ -3,11 +3,12 @@ import Carbon.HIToolbox
 /// Global hotkey via Carbon RegisterEventHotKey. No Accessibility permission required.
 final class HotKey {
     enum Preset: String, CaseIterable, Identifiable {
-        case ctrlOptSpace = "⌃⌥Space", cmdOptSpace = "⌘⌥Space", cmdShiftSpace = "⌘⇧Space", ctrlShiftSpace = "⌃⇧Space", ctrlShiftA = "⌃⇧A"
+        case shiftOptSpace = "⇧⌥Space", ctrlOptSpace = "⌃⌥Space", cmdOptSpace = "⌘⌥Space", cmdShiftSpace = "⌘⇧Space", ctrlShiftSpace = "⌃⇧Space", ctrlShiftA = "⌃⇧A"
         var id: String { rawValue }
         var keyCode: UInt32 { self == .ctrlShiftA ? 0 /* A */ : 49 /* space */ }
         var modifiers: UInt32 {
             switch self {
+            case .shiftOptSpace: return UInt32(shiftKey | optionKey)
             case .ctrlOptSpace: return UInt32(controlKey | optionKey)
             case .cmdOptSpace: return UInt32(cmdKey | optionKey)
             case .cmdShiftSpace: return UInt32(cmdKey | shiftKey)
@@ -15,8 +16,8 @@ final class HotKey {
             case .ctrlShiftA: return UInt32(controlKey | shiftKey)
             }
         }
-        // ⌃⌥Space is free by default; ⌘⇧Space is commonly taken (Gemini, input sources).
-        static var current: Preset { Preset(rawValue: UserDefaults.standard.string(forKey: "hotkey") ?? "") ?? .ctrlOptSpace }
+        // ⇧⌥Space by default; ⌘⇧Space is commonly taken (Gemini, input sources).
+        static var current: Preset { Preset(rawValue: UserDefaults.standard.string(forKey: "hotkey") ?? "") ?? .shiftOptSpace }
     }
 
     /// Set when registration fails (e.g. combination already taken by another app).
@@ -31,14 +32,14 @@ final class HotKey {
         self.handler = handler
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         let userData = Unmanaged.passUnretained(self).toOpaque()
-        let installed = InstallEventHandler(GetApplicationEventTarget(), { _, _, userData -> OSStatus in
+        let installed = InstallEventHandler(GetEventDispatcherTarget(), { _, _, userData -> OSStatus in
             guard let userData else { return noErr }
             Unmanaged<HotKey>.fromOpaque(userData).takeUnretainedValue().handler()
             return noErr
         }, 1, &spec, userData, &handlerRef)
         guard installed == noErr else { HotKey.lastError = "event handler install failed (\(installed))"; return nil }
         let id = EventHotKeyID(signature: 0x4D41_4754, id: 1) // "MAGT"
-        let status = RegisterEventHotKey(keyCode, modifiers, id, GetApplicationEventTarget(), 0, &hotKeyRef)
+        let status = RegisterEventHotKey(keyCode, modifiers, id, GetEventDispatcherTarget(), 0, &hotKeyRef)
         guard status == noErr else { HotKey.lastError = "hotkey registration failed (\(status)); combination may be taken"; return nil }
         HotKey.lastError = nil
     }

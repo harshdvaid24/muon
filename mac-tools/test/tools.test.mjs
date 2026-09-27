@@ -49,8 +49,8 @@ test("listProjects includes Muon", async () => {
   assert.match(r.text, /~\/Work\/Muon\t/);
 });
 test("getSystemStats and listRunningApps return data", async () => {
-  assert.match((await s.tool("getSystemStats")).text, /RAM: 24 GB total/);
-  assert.match((await s.tool("listRunningApps")).text, /MB\s+Finder/);
+  assert.match((await s.tool("getSystemStats")).text, /RAM: \d+ GB total/);
+  assert.match((await s.tool("listRunningApps")).text, /\d+ MB\s+\S/);   // at least one app (CI runners differ)
 });
 test("openPath outside roots is rejected without running open", async () => {
   const r = await s.tool("openPath", { path: "/etc" });

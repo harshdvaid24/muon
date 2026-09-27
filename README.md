@@ -104,7 +104,7 @@ Muon understands plain language. These are examples, not a fixed syntax.
 ### Ways in
 | Where | How |
 |---|---|
-| Keyboard | `⌃⌥Space` opens the palette (change it in Settings) |
+| Keyboard | `⇧⌥Space` opens the palette (change it in Settings) |
 | Menu bar | Click the icon; right-click for model status, macros and Settings |
 | Spotlight, Shortcuts, Siri | **Ask Muon**, **Open Project**, **Run Macro** |
 | Scripts, Raycast | `open "muon://ask?q=what%20is%20taking%20space%20in%20~/Downloads"` |
@@ -113,7 +113,7 @@ Muon understands plain language. These are examples, not a fixed syntax.
 ## How it works
 
 ```
-  ⌃⌥Space ──▶ Liquid Glass palette
+  ⇧⌥Space ──▶ Liquid Glass palette
                     │
       ┌─────────────┼───────────────────────────┐
       ▼             ▼                           ▼
