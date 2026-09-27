@@ -174,7 +174,7 @@ Crash reports are read from `~/Library/Logs/DiagnosticReports` only, read-only. 
 |---|---|
 | Keyboard | `⇧⌥Space` opens the palette. Record any shortcut in **Settings › Shortcut › Record**. Inside: `↑` `↓` suggestions and recent requests, `⇥` edit, `⌘O` attach, `⌘V` paste an image or file, `⌘⇧M` talk |
 | Voice | `⌘⇧M` or the mic button, the menu bar's **Talk to Muon**, or `open muon://listen`. **Settings › Voice** can start listening whenever the palette opens |
-| Files | Drop a file or folder on the palette, or press `⌘O`. Pasted images are kept under `~/Library/Application Support/Muon/Pasted` (newest 20) |
+| Files | Drop a file or folder on the palette, press `⌘O` or the paperclip, or right-click any file in Finder › **Open With › Muon**. Pasted images are kept under `~/Library/Application Support/Muon/Pasted` (newest 20) |
 | Menu bar | Click the icon. Right-click for model status, macros and Settings |
 | Spotlight, Shortcuts, Siri | App Intents: **Ask Muon**, **Open Project**, **Run Macro** |
 | Scripts, Raycast | `open "muon://ask?q=fix%20grammar"` |

@@ -58,6 +58,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                      forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL))
     }
 
+    /// Finder › Open With › Muon (or `open -a Muon file`): attach the file and wait for the request.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard let url = urls.first(where: \.isFileURL) else { return }
+        palette.show(anchor: nil)
+        let m = palette.model
+        m.attachment = url.path
+        m.query = ""
+        m.rows = []; m.answer = nil; m.result = nil; m.footer = nil
+        m.note = "Attached \(url.lastPathComponent). Ask anything: give me a brief · analyse it · what is the total · fix grammar"
+        m.focusRequest += 1
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil || CLI.active { return }
         wireAgent()

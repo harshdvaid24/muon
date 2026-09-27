@@ -24,7 +24,7 @@ targets:
       properties:
         CFBundleName: Muon
         CFBundleDisplayName: Muon
-        CFBundleShortVersionString: "0.3.2"
+        CFBundleShortVersionString: "0.3.3"
         CFBundleVersion: "1"
         LSUIElement: true
         LSMinimumSystemVersion: "26.0"
@@ -32,6 +32,17 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: com.harshvaid.Muon
             CFBundleURLSchemes: [muon]
+        # Finder › Open With › Muon attaches the file to the palette. Never the default app for anything.
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Any file or folder
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [public.data, public.content, public.composite-content, public.text, public.image, public.audiovisual-content, public.archive, public.source-code, public.folder, public.directory]
+          - CFBundleTypeName: Any other file
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            CFBundleTypeExtensions: ["*"]
+            CFBundleTypeOSTypes: ["****"]
         NSAppleEventsUsageDescription: Muon asks apps to quit and runs menu commands you request.
         NSSpeechRecognitionUsageDescription: Muon transcribes audio files you choose, on-device.
         NSMicrophoneUsageDescription: Muon listens only while the mic is on, to type your request. Speech is recognized on-device.

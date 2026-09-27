@@ -22,7 +22,7 @@ enum Help {
             "analyse statement.pdf from downloads and give me a brief  (a file name is enough)", "check invoice.pdf in documents: what is the total",
             "summarize ~/Documents/lease.pdf", "what does ~/Documents/lease.pdf say about the deposit", "ask ~/notes.txt: who is the owner",
             "summarize https://example.com/post", "what is typescript  ·  search the web for swift concurrency", "open github.com",
-            "Drop a file on this window, press ⌘O, or ⌘V a copied file, then ask"]),
+            "Drop a file on this window, press ⌘O or the paperclip, ⌘V a copied file, or right-click it in Finder › Open With › Muon, then ask"]),
         ("Screenshots and images", [
             "read the latest screenshot", "explain the error in this screenshot", "copy text from ~/Desktop/shot.png",
             "describe ~/Desktop/a.png: which app is this", "compare ~/Desktop/actual.png with ~/Designs/expected.png", "rename my screenshots",
