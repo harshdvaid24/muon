@@ -18,6 +18,7 @@ function asStr(s: string): string { return '"' + s.replace(/\\/g, "\\\\").replac
 
 /** What openTerminal may start: interactive coding assistants only, never arbitrary shell text. */
 const TERMINAL_COMMANDS = new Set(["", "claude", "claude --continue", "claude --resume", "codex", "gemini", "aider"]);
+const AGENT_LABELS: Record<string, string> = { claude: "Claude Code", codex: "Codex", gemini: "Gemini CLI", aider: "Aider" };
 const CODE_CLI = ["/usr/local/bin/code", "/opt/homebrew/bin/code", "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"].find((p) => fs.existsSync(p));
 
 async function osa(script: string, timeoutMs = 12000): Promise<string> {
@@ -78,11 +79,11 @@ export function registerControlTools(server: McpServer): void {
   });
 
   defineTool(server, "openTerminal", {
-    description: "Open a Terminal window in a project folder and start an interactive coding assistant there: Claude Code (claude), Codex, Gemini CLI or Aider, or just a shell. With app 'vscode' the project is also opened in VS Code. The user drives the session from there.",
+    description: "Start an interactive coding assistant in a project: Claude Code (claude), Codex, Gemini CLI or Aider, or just a shell. With app 'vscode' it opens a VS Code window for the project with the assistant running in the integrated terminal; otherwise a Terminal window. The user drives the session from there.",
     input: {
       project: z.string().min(1).describe("Project folder path"),
       command: z.string().max(40).optional().describe("claude (default), claude --continue, codex, gemini, aider, or empty for just a shell"),
-      app: z.enum(["vscode", "terminal"]).optional().describe("'vscode' also opens the project in VS Code; default 'terminal'"),
+      app: z.enum(["vscode", "terminal"]).optional().describe("'vscode': a VS Code window for the project, assistant in its terminal; 'terminal' (default): Terminal.app"),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     handler: async ({ project, command = "claude", app = "terminal" }) => {
@@ -90,14 +91,45 @@ export function registerControlTools(server: McpServer): void {
       const cmd = command.trim();
       if (!TERMINAL_COMMANDS.has(cmd)) throw new Error(`only these can be started: ${[...TERMINAL_COMMANDS].filter(Boolean).join(", ")}`);
       const name = path.basename(dir);
-      // No keystrokes into VS Code: they can land in another window. The project is brought up in VS Code, the
-      // assistant runs in a Terminal window in the same folder.
-      const inCode = app === "vscode" && !!CODE_CLI;
-      if (inCode) await run(CODE_CLI!, [dir], { timeoutMs: 15000 });
+      // VS Code: a workspace file inside the project with a task that runs on open, so the assistant starts in the
+      // integrated terminal of a window for that project. No keystrokes: they can land in another window.
+      if (app === "vscode" && CODE_CLI) {
+        const wsDir = path.join(dir, ".muon");
+        fs.mkdirSync(wsDir, { recursive: true });
+        const who = cmd ? (AGENT_LABELS[cmd.split(" ")[0]] ?? cmd) : "Shell";
+        const ws = {
+          folders: [{ path: ".." }],
+          settings: { "task.allowAutomaticTasks": "on" },
+          tasks: {
+            version: "2.0.0",
+            tasks: [{
+              label: who, type: "shell", command: cmd || "$SHELL", options: { cwd: "${workspaceFolder}" },
+              presentation: { reveal: "always", panel: "new", focus: true, echo: false, showReuseMessage: false },
+              runOptions: { runOn: "folderOpen" }, problemMatcher: [],
+            }],
+          },
+        };
+        // A new file per launch: VS Code runs on-open tasks only for a newly opened workspace, so each start is a
+        // fresh window with a fresh session. Keep the newest three.
+        const stamp = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(":", ".");   // "11.59 PM"
+        const wsFile = path.join(wsDir, `${name} · ${stamp}.code-workspace`);
+        fs.writeFileSync(wsFile, JSON.stringify(ws, null, 2));
+        for (const old of fs.readdirSync(wsDir).filter((f) => f.endsWith(".code-workspace")).sort().reverse().slice(3)) fs.rmSync(path.join(wsDir, old), { force: true });
+        const exclude = path.join(dir, ".git", "info", "exclude");
+        try {
+          if (fs.existsSync(path.join(dir, ".git"))) {
+            fs.mkdirSync(path.dirname(exclude), { recursive: true });
+            const cur = fs.existsSync(exclude) ? fs.readFileSync(exclude, "utf8") : "";
+            if (!cur.split("\n").includes(".muon/")) fs.appendFileSync(exclude, `${cur.endsWith("\n") || !cur ? "" : "\n"}.muon/\n`);
+          }
+        } catch { /* keeping the repo clean is best effort */ }
+        await run(CODE_CLI, [wsFile], { timeoutMs: 15000 });
+        return `Opened a VS Code window for ${name} with ${who} starting in its terminal. Take it from there. (No terminal? Turn on VS Code's “Task: Allow Automatic Tasks” setting once; if asked to trust the folder, choose Trust.)`;
+      }
       const shellDir = "'" + dir.replace(/'/g, "'\\''") + "'";
       await osa(`tell application "Terminal" to do script ${asStr(`cd ${shellDir}${cmd ? " && " + cmd : ""}`)}`);
       await osa('tell application "Terminal" to activate');
-      return `Opened a Terminal window in ${name}${cmd ? ` running ${cmd}` : ""}${inCode ? ", and the project in VS Code" : ""}. Take it from there.`;
+      return `Opened a Terminal window in ${name}${cmd ? ` running ${cmd}` : ""}. Take it from there.`;
     },
   });
 }
