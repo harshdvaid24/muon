@@ -11,6 +11,10 @@ final class KeyPanel: NSPanel {
 final class PanelController: NSObject, NSWindowDelegate {
     let model = PaletteModel()
     private var topLeft: NSPoint = .zero
+    private var previousApp: NSRunningApplication?
+    private var bottomAnchored = false
+    private var anchorX: CGFloat = 0
+    private var bottomY: CGFloat = 0
     private static let width: CGFloat = 640
 
     private lazy var panel: KeyPanel = {
@@ -42,31 +46,53 @@ final class PanelController: NSObject, NSWindowDelegate {
             ?? NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
         guard let vf = screen?.visibleFrame else { return }
         var x: CGFloat
-        var y: CGFloat
         if let a = anchor {
-            x = a.midX - Self.width / 2
-            y = a.minY - 6
+            // Menu-bar click: hang the panel from just under the icon, growing downward.
+            x = min(max(a.midX - Self.width / 2, vf.minX + 8), vf.maxX - Self.width - 8)
+            bottomAnchored = false
+            anchorX = x
+            topLeft = NSPoint(x: x, y: a.minY - 6)
+            panel.setFrameTopLeftPoint(topLeft)
         } else {
+            // Hotkey: bottom-center, growing upward from a fixed bottom edge.
             x = vf.midX - Self.width / 2
-            y = vf.maxY - vf.height * 0.18
+            bottomAnchored = true
+            anchorX = x
+            bottomY = vf.minY + 96
+            panel.setFrameOrigin(NSPoint(x: x, y: bottomY))
         }
-        x = min(max(x, vf.minX + 8), vf.maxX - Self.width - 8)
-        topLeft = NSPoint(x: x, y: y)
-        panel.setFrameTopLeftPoint(topLeft)
+        if let front = NSWorkspace.shared.frontmostApplication, front.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            previousApp = front
+        }
         NSApp.activate()
         panel.makeKeyAndOrderFront(nil)
         model.focusRequest += 1
+        Sound.play(.appear)
     }
 
     func hide() {
         model.pending?.decide(.cancel)
         panel.orderOut(nil)
+        // If nothing else took focus (Esc, quit-app…), hand it back to the app the user came from.
+        let me = ProcessInfo.processInfo.processIdentifier
+        if NSWorkspace.shared.frontmostApplication?.processIdentifier == me {
+            if let prev = previousApp, !prev.isTerminated {
+                NSApp.yieldActivation(to: prev)
+                prev.activate()
+            } else {
+                NSApp.hide(nil)
+            }
+        }
     }
 
     private func resize(to size: CGSize) {
         guard size.height > 0 else { return }
         panel.setContentSize(NSSize(width: Self.width, height: size.height))
-        panel.setFrameTopLeftPoint(topLeft)
+        if bottomAnchored {
+            panel.setFrameOrigin(NSPoint(x: anchorX, y: bottomY)) // fixed bottom edge → grows upward
+        } else {
+            panel.setFrameTopLeftPoint(topLeft) // fixed top edge → grows downward
+        }
     }
 
     func windowDidResignKey(_ notification: Notification) { hide() }
@@ -74,19 +100,21 @@ final class PanelController: NSObject, NSWindowDelegate {
 
 extension PanelController: Approver {
     func approve(_ a: PendingAction) async -> ApprovalDecision {
+        model.status = nil
         if a.destructive {
             let alert = NSAlert()
             alert.alertStyle = .critical
             alert.messageText = a.title
             alert.informativeText = a.detail
+            alert.addButton(withTitle: "Cancel")   // default (Return) is the safe choice
             alert.addButton(withTitle: "Proceed")
-            alert.addButton(withTitle: "Cancel")
-            return alert.runModal() == .alertFirstButtonReturn ? .allow : .cancel
+            return alert.runModal() == .alertSecondButtonReturn ? .allow : .cancel
         }
+        Sound.play(.prompt)
         return await withCheckedContinuation { cont in
             model.pending?.decide(.cancel) // a newer request supersedes any card still waiting
             var done = false
-            model.pending = PaletteModel.Pending(title: a.title, detail: a.detail, destructive: false, allowAlwaysLabel: a.alwaysLabel) { [weak self] d in
+            model.pending = PaletteModel.Pending(icon: a.icon, title: a.title, detail: a.detail, destructive: false, allowAlwaysLabel: a.alwaysLabel) { [weak self] d in
                 guard !done else { return }
                 done = true
                 self?.model.pending = nil

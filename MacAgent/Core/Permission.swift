@@ -5,6 +5,7 @@ enum ApprovalDecision { case allow, allowAlways, cancel }
 enum Risk { case auto, confirm, destructive }
 
 struct PendingAction {
+    let icon: String
     let tool: String
     let args: [String: Any]
     let title: String
@@ -60,6 +61,18 @@ enum Permission {
         }
         if let p = args["path"] as? String { return (Settings.expand(p) as NSString).deletingLastPathComponent }
         return nil
+    }
+
+    /// SF Symbol per tool, shown on the confirm card.
+    static func icon(for tool: String) -> String {
+        switch tool {
+        case "moveItems", "copyItems", "createFolder": return "folder.fill.badge.plus"
+        case "trashItems": return "trash.fill"
+        case "renameItem": return "pencil"
+        case "quitApplication": return "xmark.app.fill"
+        case "killProcess": return "bolt.slash.fill"
+        default: return "checkmark.shield.fill"
+        }
     }
 
     static func describe(tool: String, args: [String: Any]) -> (title: String, detail: String) {

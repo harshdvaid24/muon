@@ -30,20 +30,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil || CLI.active { return }
         wireAgent()
         setupStatusItem()
-        hotKey = HotKey(keyCode: 49 /* space */, modifiers: HotKey.controlOption) { [weak self] in
-            self?.palette.toggle(anchor: nil)
+        registerHotKey()
+        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.registerHotKey() }
         }
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
+
+    private var registeredPreset: HotKey.Preset?
+    private func registerHotKey() {
+        let preset = HotKey.Preset.current
+        guard preset != registeredPreset || hotKey == nil else { return }
+        hotKey = nil
+        hotKey = HotKey(keyCode: preset.keyCode, modifiers: preset.modifiers) { [weak self] in self?.palette.toggle(anchor: nil) }
+        registeredPreset = hotKey == nil ? nil : preset
+        if let err = HotKey.lastError { NSLog("MacAgent: %@ for %@", err, preset.rawValue) }
+    }
 
     // MARK: Status item
 
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         guard let button = statusItem.button else { return }
-        let image = NSImage(systemSymbolName: "sparkle.magnifyingglass", accessibilityDescription: "MacAgent")
+        let image = NSImage(named: "MenuBarIcon") ?? NSImage(systemSymbolName: "sparkles", accessibilityDescription: "MacAgent")
         image?.isTemplate = true
+        image?.size = NSSize(width: 18, height: 18)
         button.image = image
         button.target = self
         button.action = #selector(statusClicked(_:))
@@ -60,7 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showMenu() {
         let menu = NSMenu()
-        let ask = NSMenuItem(title: "Ask MacAgent…   ⌃⌥Space", action: #selector(openPalette), keyEquivalent: "")
+        let ask = NSMenuItem(title: "Ask MacAgent…   \(HotKey.Preset.current.rawValue)", action: #selector(openPalette), keyEquivalent: "")
         ask.target = self
         menu.addItem(ask)
         menu.addItem(.separator())
@@ -161,12 +173,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             m.answer = Agent.shared.saveMacro(named: String(q.dropFirst(11)).trimmingCharacters(in: .whitespaces))
             return
         }
+        let started = Date()
         let out = await Agent.shared.run(q, approver: palette) { s in Task { @MainActor in m.status = s } }
         m.status = nil
         m.answer = out.cancelled ? "Cancelled." : out.answer
-        if let note = out.note { m.answer = (m.answer.map { $0 + "\n\n" } ?? "") + note }
+        m.note = out.note
+        if out.cancelled { Sound.play(.cancel) }
+        else if out.results.contains(where: { !$0.ok }) { Sound.play(.error) }
+        else if !out.results.isEmpty || !out.suggestions.isEmpty { Sound.play(.success) }
+        let secs = Date().timeIntervalSince(started)
+        let time = secs < 1 ? "\(Int(secs * 1000)) ms" : String(format: "%.1f s", secs)
+        let source = out.tier == 0 ? "from memory" : out.tier == 1 ? "on-device" : (out.model ?? "local model")
+        m.footer = "\(source) · \(time)"
         m.rows = out.suggestions.map { s in
-            PaletteModel.Row(icon: s.icon, title: s.title, subtitle: s.subtitle) { [weak self] in
+            PaletteModel.Row(icon: s.icon, title: s.title, subtitle: s.subtitle, section: s.section) { [weak self] in
                 guard let self else { return }
                 Task { @MainActor in
                     m.isBusy = true
@@ -174,6 +194,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     m.status = nil
                     m.isBusy = false
                     m.answer = r.text
+                    Sound.play(r.ok ? .success : .error)
                     if r.ok, Self.closesPalette(r.tool) { self.dismissSoon() }
                 }
             }

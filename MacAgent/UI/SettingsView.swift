@@ -13,12 +13,21 @@ struct SettingsView: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
     @State private var macros = Agent.shared.memory?.macros() ?? []
+    @AppStorage("hotkey") private var hotkey = HotKey.Preset.ctrlOptSpace.rawValue
+    @AppStorage("sounds") private var sounds = true
 
     var body: some View {
         Form {
             Section("General") {
-                LabeledContent("Hotkey", value: "⌃⌥Space")
+                Picker("Hotkey", selection: $hotkey) { ForEach(HotKey.Preset.allCases) { Text($0.rawValue).tag($0.rawValue) } }
+                if let err = HotKey.lastError {
+                    Text("\(err). Another app (e.g. Gemini owns ⌘⇧Space) may have this combination; pick another.").font(.caption).foregroundStyle(.red)
+                } else {
+                    Text("If the hotkey does nothing, another app already owns it — pick a different combination.").font(.caption).foregroundStyle(.secondary)
+                }
+                Toggle("Sound effects", isOn: $sounds)
                 Toggle("Launch at login", isOn: $launchAtLogin)
+                    .toggleStyle(.switch)
                     .onChange(of: launchAtLogin) { _, on in
                         do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }; loginError = nil }
                         catch { loginError = error.localizedDescription; launchAtLogin = SMAppService.mainApp.status == .enabled }

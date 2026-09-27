@@ -29,7 +29,7 @@ lms get qwen/qwen3.5-4b@4bit --mlx -y     # low-memory fallback (~3 GB)
 
 | How | What |
 |---|---|
-| ⌃⌥Space | palette, Spotlight-style |
+| ⌃⌥Space (Settings → Hotkey to change) | palette, bottom-center |
 | Menu bar icon | palette anchored under icon; right-click for model status, macros, Settings |
 | Spotlight / Shortcuts / Siri | App Intents: Open Project, Ask MacAgent, Run Macro |
 | `open "macagent://ask?q=open%20kathak"` | scripts, Raycast, Shortcuts |
@@ -62,4 +62,4 @@ claude mcp add mac-tools -- node ~/Work/MacAgent/mac-tools/dist/index.js
 - LM Studio ignores `lms load --context-length` for the MLX Qwen3.5 models (API reports `loaded_context_length: 123648`). MLX grows the KV cache with actual tokens and the agent loop is bounded (≤ 8 steps, ≤ 20 results per tool), so memory stays near the weights (~3 GB for 4B, ~6 GB for 9B). To hard-cap it, set the model's Context Length in LM Studio → My Models → model settings.
 - Tier 1 needs Apple Intelligence enabled; without it every request goes to LM Studio.
 - `mac-tools` is run from the repo path (see Settings → Tool server); it is not bundled into the .app yet.
-- Hotkey is fixed at ⌃⌥Space (Settings shows it; not yet rebindable).
+- Hotkey presets only (⌘⇧Space default); free-form recorder not yet implemented.

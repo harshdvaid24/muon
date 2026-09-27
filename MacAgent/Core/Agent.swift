@@ -13,6 +13,7 @@ struct Suggestion {
     let icon: String
     let title: String
     let subtitle: String?
+    let section: String
     let tool: String
     let args: [String: Any]
     let learnAlias: (term: String, path: String)?
@@ -25,6 +26,7 @@ struct AgentOutput {
     var results: [ActionResult] = []
     var note: String?
     var cancelled = false
+    var model: String?
 }
 
 /// Orchestrates the tiers: memory → on-device model → LM Studio. Learns after every success.
@@ -140,7 +142,8 @@ final class Agent {
                 let inApp = (args["app"] as? String).map { " in \($0)" } ?? ""
                 out.suggestions = candidates.prefix(6).map { p in
                     var a = args; a["path"] = p.path
-                    return Suggestion(icon: Self.icon(forType: p.type), title: "\(verb) \(p.name)\(inApp)", subtitle: Self.short(p.path), tool: tool, args: a, learnAlias: (term, p.path))
+                    return Suggestion(icon: Self.icon(forType: p.type), title: "\(verb) \(p.name)\(inApp)", subtitle: "\(Self.short(p.path)) · \(p.type)",
+                                      section: "Projects", tool: tool, args: a, learnAlias: (term, p.path))
                 }
                 return out
             }
@@ -243,6 +246,7 @@ final class Agent {
                 answer = try await attempt(model)
             }
             out.results = results
+            out.model = model
             out.answer = answer.isEmpty ? "Done." : answer
             out.cancelled = results.contains { $0.cancelled }
             if gate.useSmall, model == Settings.fallbackModel { out.note = "Used \(model) because \(gate.reason ?? "memory is tight")." }
@@ -267,7 +271,7 @@ final class Agent {
             if !Permission.isAlwaysAllowed(key) {
                 let (title, detail) = Permission.describe(tool: tool, args: args)
                 let folder = Permission.folder(in: args).map { ($0 as NSString).lastPathComponent }
-                let pending = PendingAction(tool: tool, args: args, title: title, detail: detail, destructive: risk == .destructive,
+                let pending = PendingAction(icon: Permission.icon(for: tool), tool: tool, args: args, title: title, detail: detail, destructive: risk == .destructive,
                                             alwaysKey: key, alwaysLabel: key != nil ? "Always allow in \(folder ?? "this folder")" : nil)
                 switch await approver.approve(pending) {
                 case .cancel: return ActionResult(tool: tool, args: args, text: "Cancelled.", ok: false, cancelled: true)
@@ -383,8 +387,10 @@ final class Agent {
                 let type = line.split(separator: "\t").count > 1 ? String(line.split(separator: "\t")[1]) : (isDir.boolValue ? "folder" : "file")
                 let subtitle = pathPart == display ? Self.short(abs) : String(line.dropFirst(pathPart.count + 1).prefix(90))
                 if exists {
+                    let section = r.tool == "listProjects" ? "Projects" : (isDir.boolValue ? "Folders" : "Files")
                     out.suggestions.append(Suggestion(icon: Self.icon(forType: type), title: (abs as NSString).lastPathComponent + (isDir.boolValue ? "/" : ""),
-                                                      subtitle: subtitle, tool: "openPath", args: args, learnAlias: aliasTerm.map { ($0, abs) }))
+                                                      subtitle: r.tool == "listProjects" ? "\(Self.short(abs)) · \(type)" : subtitle, section: section,
+                                                      tool: "openPath", args: args, learnAlias: aliasTerm.map { ($0, abs) }))
                     continue
                 }
             }
@@ -401,12 +407,12 @@ final class Agent {
 
     static func icon(forType t: String) -> String {
         switch t {
-        case "react-native", "node", "nextjs": return "shippingbox"
-        case "xcode", "xcode-workspace", "swift-package": return "hammer"
+        case "react-native", "node", "nextjs", "react": return "shippingbox.fill"
+        case "xcode", "xcode-workspace", "swift-package": return "hammer.fill"
         case "android": return "smartphone"
         case "python": return "chevron.left.forwardslash.chevron.right"
-        case "file": return "doc"
-        default: return "folder"
+        case "file": return "doc.text.fill"
+        default: return "folder.fill"
         }
     }
 

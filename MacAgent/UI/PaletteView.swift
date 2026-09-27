@@ -7,7 +7,7 @@ struct PaletteView: View {
     @FocusState private var focused: Bool
     @Namespace private var glassNS
 
-    private var hasBody: Bool { !model.rows.isEmpty || model.answer != nil || model.status != nil || model.pending != nil }
+    private var hasBody: Bool { !model.rows.isEmpty || model.answer != nil || model.status != nil || model.pending != nil || model.note != nil }
 
     var body: some View {
         GlassEffectContainer(spacing: 12) {
@@ -19,42 +19,54 @@ struct PaletteView: View {
                     if let pending = model.pending { ConfirmCard(pending: pending) }
                     if let answer = model.answer { answerBlock(answer) }
                     if !model.rows.isEmpty { results }
+                    if let note = model.note { noteRow(note) }
+                    if let footer = model.footer, model.pending == nil, model.status == nil { footerRow(footer) }
                 }
             }
             .frame(width: 640)
             .fixedSize(horizontal: false, vertical: true)
-            .glassEffect(.regular, in: .rect(cornerRadius: 28))
+            .glassEffect(.regular, in: .rect(cornerRadius: 26))
             .glassEffectID("palette", in: glassNS)
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { onSize($0) }
-        .onExitCommand { onClose() }
+        .onExitCommand { if model.escape() { onClose() } }
         .onAppear { focused = true }
         .onChange(of: model.focusRequest) { focused = true }
-        .animation(.smooth(duration: 0.25), value: hasBody)
+        .animation(.smooth(duration: 0.22), value: hasBody)
     }
+
+    // MARK: Search
 
     private var searchBar: some View {
         HStack(spacing: 12) {
-            Image(systemName: "sparkle.magnifyingglass")
-                .font(.title2)
+            Image("MenuBarIcon")
+                .renderingMode(.template)
+                .resizable()
+                .frame(width: 20, height: 20)
                 .foregroundStyle(.secondary)
             TextField("Ask MacAgent…", text: $model.query)
                 .textFieldStyle(.plain)
-                .font(.title2)
+                .font(.system(size: 20))
                 .focused($focused)
-                .onSubmit { model.submit() }
+                .onSubmit { model.handleReturn() }
                 .onKeyPress(.downArrow) { model.moveSelection(1); return .handled }
                 .onKeyPress(.upArrow) { model.moveSelection(-1); return .handled }
-            if model.isBusy { ProgressView().controlSize(.small) }
+            if model.isBusy {
+                ProgressView().controlSize(.small)
+            } else if model.pending == nil {
+                KeyHint(model.query.isEmpty ? "esc" : "↩")
+            }
         }
-        .padding(.horizontal, 22)
-        .frame(height: 60)
+        .padding(.horizontal, 20)
+        .frame(height: 56)
     }
+
+    // MARK: Body blocks
 
     private func statusRow(_ text: String) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: "circle.dotted").foregroundStyle(.secondary)
-            Text(text).font(.callout).foregroundStyle(.secondary)
+            ProgressView().controlSize(.small)
+            Text(text).font(.system(size: 13)).foregroundStyle(.secondary)
             Spacer()
         }
         .padding(.horizontal, 22).padding(.vertical, 10)
@@ -63,62 +75,122 @@ struct PaletteView: View {
     private func answerBlock(_ text: String) -> some View {
         ScrollView {
             Text(text)
-                .font(.body.monospaced())
+                .font(.system(size: 12.5, design: .monospaced))
+                .lineSpacing(2)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxHeight: 280)
-        .padding(.horizontal, 22).padding(.vertical, 12)
+        .padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 14)
+    }
+
+    private func noteRow(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "info.circle").font(.system(size: 12)).foregroundStyle(.secondary).padding(.top, 1)
+            Text(text).font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 22).padding(.vertical, 10)
+    }
+
+    private func footerRow(_ text: String) -> some View {
+        HStack {
+            Text(text).font(.system(size: 11)).foregroundStyle(.tertiary)
+            Spacer()
+        }
+        .padding(.horizontal, 22).padding(.bottom, 12)
     }
 
     private var results: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, row in
-                HStack(spacing: 12) {
-                    Image(systemName: row.icon)
-                        .frame(width: 22)
-                        .foregroundStyle(index == model.selection ? .primary : .secondary)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(row.title).lineLimit(1)
-                        if let s = row.subtitle { Text(s).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
-                    }
-                    Spacer()
-                    if index == model.selection, row.action != nil { Image(systemName: "return").foregroundStyle(.tertiary) }
+                if let section = row.section, index == 0 || model.rows[index - 1].section != section {
+                    Text(section.uppercased())
+                        .font(.system(size: 11, weight: .semibold))
+                        .tracking(0.6)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 14).padding(.top, index == 0 ? 8 : 10).padding(.bottom, 4)
                 }
-                .padding(.horizontal, 12).padding(.vertical, 7)
-                .background(index == model.selection ? AnyShapeStyle(.selection) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 10))
-                .contentShape(.rect)
-                .onTapGesture { model.selection = index; model.activateSelection() }
+                ResultRow(row: row, selected: index == model.selection)
+                    .contentShape(.rect)
+                    .onTapGesture { model.selection = index; model.activateSelection() }
             }
         }
-        .padding(10)
+        .padding(.horizontal, 8).padding(.bottom, 8)
+    }
+}
+
+private struct ResultRow: View {
+    let row: PaletteModel.Row
+    let selected: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: row.icon)
+                .symbolRenderingMode(.hierarchical)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                .frame(width: 24, height: 24)
+                .background(selected ? AnyShapeStyle(.tint.opacity(0.22)) : AnyShapeStyle(.primary.opacity(0.08)), in: .rect(cornerRadius: 6))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(row.title).font(.system(size: 14, weight: .medium)).lineLimit(1)
+                if let s = row.subtitle { Text(s).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1) }
+            }
+            Spacer()
+            if selected, row.action != nil { KeyHint("↩") }
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 40)
+        .background(selected ? AnyShapeStyle(.primary.opacity(0.10)) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 10))
+    }
+}
+
+/// Small keyboard hint capsule ("esc", "↩").
+struct KeyHint: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 7).padding(.vertical, 3)
+            .background(.primary.opacity(0.08), in: .rect(cornerRadius: 6))
     }
 }
 
 struct ConfirmCard: View {
     let pending: PaletteModel.Pending
 
+    private var looksLikePaths: Bool { pending.detail.contains("/") }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(pending.title, systemImage: pending.destructive ? "exclamationmark.triangle.fill" : "hand.raised.fill")
-                .font(.headline)
+            HStack(spacing: 10) {
+                Image(systemName: pending.icon)
+                    .symbolRenderingMode(.hierarchical)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(pending.destructive ? AnyShapeStyle(.red) : AnyShapeStyle(.tint))
+                    .frame(width: 28, height: 28)
+                    .background(pending.destructive ? AnyShapeStyle(.red.opacity(0.18)) : AnyShapeStyle(.tint.opacity(0.22)), in: .rect(cornerRadius: 8))
+                Text(pending.title).font(.system(size: 15, weight: .semibold))
+            }
             Text(pending.detail)
-                .font(.callout)
+                .font(looksLikePaths ? .system(size: 12.5, design: .monospaced) : .system(size: 13))
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
                 .lineLimit(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            HStack {
+            HStack(spacing: 8) {
                 if let label = pending.allowAlwaysLabel {
                     Button(label) { pending.decide(.allowAlways) }.buttonStyle(.glass)
                 }
                 Spacer()
-                Button("Cancel") { pending.decide(.cancel) }.buttonStyle(.glass).keyboardShortcut(.cancelAction)
-                Button(pending.destructive ? "Proceed" : "Allow") { pending.decide(.allow) }
+                Button { pending.decide(.cancel) } label: { HStack(spacing: 6) { Text("Cancel"); Text("esc").font(.system(size: 11)).opacity(0.6) } }
+                    .buttonStyle(.glass)
+                Button { pending.decide(.allow) } label: { HStack(spacing: 6) { Text(pending.destructive ? "Proceed" : "Allow"); Text("↩").font(.system(size: 11)).opacity(0.75) } }
                     .buttonStyle(.glassProminent)
-                    .keyboardShortcut(.defaultAction)
             }
+            .padding(.top, 4)
         }
-        .padding(18)
+        .padding(.horizontal, 22).padding(.top, 16).padding(.bottom, 18)
     }
 }
