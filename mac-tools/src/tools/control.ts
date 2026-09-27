@@ -2,11 +2,13 @@
 // function an app exposes through its menu bar, without arbitrary code. Needs Accessibility permission.
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { defineTool } from "../define.js";
 import { run } from "../run.js";
-import { resolveAllowed } from "../paths.js";
+import { resolveAllowed, HOME } from "../paths.js";
 
 const APP_NAME = /^[\w .+&()'-]{1,64}$/;
 // A menu title: printable, no newlines/quotes/control chars that could break out of the AppleScript string.
@@ -15,6 +17,20 @@ const menuPath = z.array(z.string().regex(MENU_ITEM)).min(1).max(4).describe("Me
 
 /** AppleScript string literal, safely quoted. Input is already regex-restricted, this is belt-and-braces. */
 function asStr(s: string): string { return '"' + s.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"'; }
+
+/** VS Code remembers layout per workspace under this folder, keyed by md5 of the lower-cased workspace path.
+ *  For a workspace it has never seen, seed "side bar, panel and secondary bar hidden" so the first open is
+ *  already just the assistant. An existing folder is the user's own choice and is left alone. */
+const CODE_STORAGE = path.join(HOME, "Library/Application Support/Code/User/workspaceStorage");
+async function seedTerminalOnlyLayout(wsFile: string): Promise<void> {
+  const dir = path.join(CODE_STORAGE, createHash("md5").update(wsFile.toLowerCase()).digest("hex"));
+  if (fs.existsSync(dir) || !fs.existsSync(CODE_STORAGE)) return;
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "workspace.json"), JSON.stringify({ workspace: pathToFileURL(wsFile).href }, null, 2));
+  await run("/usr/bin/sqlite3", [path.join(dir, "state.vscdb"),
+    "CREATE TABLE IF NOT EXISTS ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB); " +
+    "INSERT INTO ItemTable(key, value) VALUES ('workbench.sideBar.hidden','true'), ('workbench.panel.hidden','true'), ('workbench.auxiliaryBar.hidden','true');"]);
+}
 
 /** What openTerminal may start: interactive coding assistants only, never arbitrary shell text. */
 const TERMINAL_COMMANDS = new Set(["", "claude", "claude --continue", "claude --resume", "codex", "gemini", "aider"]);
@@ -97,24 +113,32 @@ export function registerControlTools(server: McpServer): void {
         const wsDir = path.join(dir, ".muon");
         fs.mkdirSync(wsDir, { recursive: true });
         const who = cmd ? (AGENT_LABELS[cmd.split(" ")[0]] ?? cmd) : "Shell";
+        // The window is just the assistant: VS Code opens a terminal in the editor area on startup, and the
+        // workspace's default terminal profile runs the assistant, so nothing is typed and no task is needed.
+        // No activity bar, tabs or status bar. One stable workspace file per project, so VS Code remembers the
+        // layout (hide the side bar once with ⌘B) and an open window is focused instead of duplicated.
+        const profile = cmd ? { path: "/bin/zsh", args: ["-lic", cmd], icon: "sparkle" } : { path: "/bin/zsh", args: ["-l"] };
         const ws = {
           folders: [{ path: ".." }],
-          settings: { "task.allowAutomaticTasks": "on" },
-          tasks: {
-            version: "2.0.0",
-            tasks: [{
-              label: who, type: "shell", command: cmd || "$SHELL", options: { cwd: "${workspaceFolder}" },
-              presentation: { reveal: "always", panel: "new", focus: true, echo: false, showReuseMessage: false },
-              runOptions: { runOn: "folderOpen" }, problemMatcher: [],
-            }],
+          settings: {
+            "workbench.startupEditor": "terminal",
+            "terminal.integrated.profiles.osx": { [who]: profile },
+            "terminal.integrated.defaultProfile.osx": who,
+            "terminal.integrated.defaultLocation": "editor",
+            "terminal.integrated.enablePersistentSessions": false,
+            "terminal.integrated.confirmOnExit": "never",
+            "workbench.activityBar.location": "hidden",
+            "workbench.secondarySideBar.defaultVisibility": "hidden",
+            "workbench.editor.showTabs": "none",
+            "workbench.statusBar.visible": false,
           },
         };
-        // A new file per launch: VS Code runs on-open tasks only for a newly opened workspace, so each start is a
-        // fresh window with a fresh session. Keep the newest three.
-        const stamp = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(":", ".");   // "11.59 PM"
-        const wsFile = path.join(wsDir, `${name} · ${stamp}.code-workspace`);
+        const wsFile = path.join(wsDir, `${name}.code-workspace`);
+        for (const old of fs.readdirSync(wsDir).filter((f) => f.endsWith(".code-workspace") && f !== `${name}.code-workspace`)) fs.rmSync(path.join(wsDir, old), { force: true });
+        const openWindows = await osa('tell application "System Events" to tell process "Code" to get name of windows').catch(() => "");
+        const alreadyOpen = openWindows.toLowerCase().includes(`${name} (workspace)`.toLowerCase());
         fs.writeFileSync(wsFile, JSON.stringify(ws, null, 2));
-        for (const old of fs.readdirSync(wsDir).filter((f) => f.endsWith(".code-workspace")).sort().reverse().slice(3)) fs.rmSync(path.join(wsDir, old), { force: true });
+        await seedTerminalOnlyLayout(wsFile).catch(() => { /* layout seeding is best effort */ });
         const exclude = path.join(dir, ".git", "info", "exclude");
         try {
           if (fs.existsSync(path.join(dir, ".git"))) {
@@ -124,7 +148,8 @@ export function registerControlTools(server: McpServer): void {
           }
         } catch { /* keeping the repo clean is best effort */ }
         await run(CODE_CLI, [wsFile], { timeoutMs: 15000 });
-        return `Opened a VS Code window for ${name} with ${who} starting in its terminal. Take it from there. (No terminal? Turn on VS Code's “Task: Allow Automatic Tasks” setting once; if asked to trust the folder, choose Trust.)`;
+        if (alreadyOpen) return `${who} for ${name} is already open in VS Code; brought that window to the front. Close it and ask again for a fresh session.`;
+        return `Opened a VS Code window for ${name} with ${who} running in it. Take it from there. (If VS Code asks whether to trust the folder, choose Trust.)`;
       }
       const shellDir = "'" + dir.replace(/'/g, "'\\''") + "'";
       await osa(`tell application "Terminal" to do script ${asStr(`cd ${shellDir}${cmd ? " && " + cmd : ""}`)}`);

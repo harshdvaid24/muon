@@ -32,7 +32,7 @@ enum Help {
         ("Expenses and crashes", [
             "total the receipts in ~/Documents/Receipts", "why did my app crash  ·  why did Safari crash"]),
         ("Developer", [
-            "start claude code for weather-app  (a new VS Code window for that project with Claude Code in its terminal; also codex · gemini · aider)",
+            "start claude code for weather-app  (a VS Code window for that project that is just Claude Code; also codex · gemini · aider)",
             "run ~/Projects/weather-app on iPhone 17  ·  run weather-app on pixel 9", "which simulators do I have", "is my build done  ·  job status",
             "what changed  ·  commit this  ·  push", "clean the metro caches", "pair my watch 192.168.1.20:41234 code 123456", "install ~/Downloads/app.apk on my phone",
             "build a signed apk for weather-app", "list the workflows in weather-app  ·  trigger the release workflow in weather-app on main",

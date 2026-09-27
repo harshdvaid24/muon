@@ -5,6 +5,7 @@ export const ALLOWED_BINS = new Set([
   "open", "mdfind", "rg", "ps", "pgrep", "osascript", "du", "df", "xcrun", "vm_stat", "pmset", "sysctl", "trash",
   // VS Code CLI, for "start claude code for <project>" (opens a window; never a shell)
   "/usr/local/bin/code", "/opt/homebrew/bin/code", "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+  "/usr/bin/sqlite3",   // seeds VS Code's per-workspace layout state for a terminal-only assistant window
 ]);
 
 export interface RunResult { stdout: string; stderr: string; code: number }
