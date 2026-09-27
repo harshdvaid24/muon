@@ -1,4 +1,5 @@
 import ApplicationServices
+import Carbon
 import ServiceManagement
 import SwiftUI
 
@@ -21,7 +22,9 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("General") {
-                Picker("Hotkey", selection: $hotkey) { ForEach(HotKey.Preset.allCases) { Text($0.rawValue).tag($0.rawValue) } }
+                ShortcutRecorder()
+                Picker("Preset", selection: $hotkey) { ForEach(HotKey.Preset.allCases) { Text($0.rawValue).tag($0.rawValue) } }
+                    .onChange(of: hotkey) { HotKey.save(nil) }   // choosing a preset clears a recorded shortcut
                 if let err = HotKey.lastError {
                     Text("\(err). Another app (e.g. Gemini owns ⌘⇧Space) may have this combination; pick another.").font(.caption).foregroundStyle(.red)
                 } else {
@@ -93,5 +96,53 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 520, height: 640)
+    }
+}
+
+
+/// Click "Record", press the keys you want; Muon registers exactly what the keyboard sends.
+struct ShortcutRecorder: View {
+    @State private var label = HotKey.currentCombo.label
+    @State private var recording = false
+    @State private var monitor: Any?
+    @State private var hint: String?
+
+    var body: some View {
+        LabeledContent("Shortcut") {
+            HStack(spacing: 8) {
+                Text(recording ? "Press keys…" : label)
+                    .font(.system(.body, design: .rounded).weight(.medium))
+                    .padding(.horizontal, 10).padding(.vertical, 4)
+                    .background(.quaternary, in: .rect(cornerRadius: 6))
+                Button(recording ? "Cancel" : "Record") { recording ? stop() : start() }
+            }
+        }
+        if let hint { Text(hint).font(.caption).foregroundStyle(.secondary) }
+    }
+
+    private func start() {
+        hint = "Press the shortcut you want, including ⌘, ⌥, ⌃ or ⇧."
+        recording = true
+        NotificationCenter.default.post(name: HotKey.pauseNotification, object: nil)
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
+            let mods = HotKey.carbonModifiers(e.modifierFlags)
+            if e.keyCode == 53, mods == 0 { stop(); return nil }                        // Esc cancels
+            guard mods & UInt32(cmdKey | optionKey | controlKey) != 0 else {
+                hint = "Add ⌘, ⌥ or ⌃ so normal typing is not captured."; return nil
+            }
+            let combo = HotKeyCombo(keyCode: UInt32(e.keyCode), modifiers: mods, label: HotKey.label(for: e))
+            HotKey.save(combo)
+            label = combo.label
+            hint = "Shortcut set to \(combo.label)."
+            stop()
+            return nil
+        }
+    }
+
+    private func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        recording = false
+        NotificationCenter.default.post(name: HotKey.resumeNotification, object: nil)
     }
 }

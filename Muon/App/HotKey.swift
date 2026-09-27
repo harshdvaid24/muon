@@ -49,3 +49,57 @@ final class HotKey {
         if let handlerRef { RemoveEventHandler(handlerRef) }
     }
 }
+
+import AppKit
+
+/// A recorded or preset shortcut.
+struct HotKeyCombo: Equatable {
+    var keyCode: UInt32
+    var modifiers: UInt32   // Carbon mask
+    var label: String
+}
+
+extension HotKey {
+    static let pauseNotification = Notification.Name("MuonHotKeyPause")
+    static let resumeNotification = Notification.Name("MuonHotKeyResume")
+
+    /// A recorded shortcut wins over the preset.
+    static var currentCombo: HotKeyCombo {
+        let d = UserDefaults.standard
+        if let label = d.string(forKey: "hotkeyLabel"), d.object(forKey: "hotkeyCode") != nil {
+            return HotKeyCombo(keyCode: UInt32(d.integer(forKey: "hotkeyCode")), modifiers: UInt32(d.integer(forKey: "hotkeyMods")), label: label)
+        }
+        let p = Preset.current
+        return HotKeyCombo(keyCode: p.keyCode, modifiers: p.modifiers, label: p.rawValue)
+    }
+
+    static func save(_ c: HotKeyCombo?) {
+        let d = UserDefaults.standard
+        guard let c else { ["hotkeyCode", "hotkeyMods", "hotkeyLabel"].forEach(d.removeObject); return }
+        d.set(Int(c.keyCode), forKey: "hotkeyCode")
+        d.set(Int(c.modifiers), forKey: "hotkeyMods")
+        d.set(c.label, forKey: "hotkeyLabel")
+    }
+
+    static func carbonModifiers(_ f: NSEvent.ModifierFlags) -> UInt32 {
+        var m: UInt32 = 0
+        if f.contains(.command) { m |= UInt32(cmdKey) }
+        if f.contains(.shift) { m |= UInt32(shiftKey) }
+        if f.contains(.option) { m |= UInt32(optionKey) }
+        if f.contains(.control) { m |= UInt32(controlKey) }
+        return m
+    }
+
+    /// "⇧⌥Space", "⌃⌘K" …, in Apple's modifier order.
+    static func label(for e: NSEvent) -> String {
+        let f = e.modifierFlags
+        var s = ""
+        if f.contains(.control) { s += "⌃" }
+        if f.contains(.option) { s += "⌥" }
+        if f.contains(.shift) { s += "⇧" }
+        if f.contains(.command) { s += "⌘" }
+        let named: [UInt16: String] = [49: "Space", 36: "Return", 48: "Tab", 51: "Delete", 53: "Esc", 122: "F1", 120: "F2", 99: "F3", 118: "F4",
+                                       96: "F5", 97: "F6", 98: "F7", 100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12"]
+        return s + (named[e.keyCode] ?? (e.charactersIgnoringModifiers ?? "?").uppercased())
+    }
+}

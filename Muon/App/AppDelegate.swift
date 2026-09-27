@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         wireAgent()
         setupStatusItem()
         registerHotKey()
+        observeHotKeyPause()
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.registerHotKey() }
         }
@@ -50,14 +51,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
 
-    private var registeredPreset: HotKey.Preset?
+    private var registeredCombo: HotKeyCombo?
+    private var hotKeyPaused = false
     private func registerHotKey() {
-        let preset = HotKey.Preset.current
-        guard preset != registeredPreset || hotKey == nil else { return }
+        guard !hotKeyPaused else { return }
+        let combo = HotKey.currentCombo
+        guard combo != registeredCombo || hotKey == nil else { return }
         hotKey = nil
-        hotKey = HotKey(keyCode: preset.keyCode, modifiers: preset.modifiers) { [weak self] in self?.palette.toggle(anchor: nil) }
-        registeredPreset = hotKey == nil ? nil : preset
-        if let err = HotKey.lastError { NSLog("Muon: %@ for %@", err, preset.rawValue) }
+        hotKey = HotKey(keyCode: combo.keyCode, modifiers: combo.modifiers) { [weak self] in self?.palette.toggle(anchor: nil) }
+        registeredCombo = hotKey == nil ? nil : combo
+        if let err = HotKey.lastError { NSLog("Muon: %@ for %@", err, combo.label) }
+    }
+
+    /// The Settings recorder pauses the global shortcut so the keys reach it instead of opening the palette.
+    private func observeHotKeyPause() {
+        NotificationCenter.default.addObserver(forName: HotKey.pauseNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.hotKeyPaused = true; self?.hotKey = nil; self?.registeredCombo = nil }
+        }
+        NotificationCenter.default.addObserver(forName: HotKey.resumeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.hotKeyPaused = false; self?.registerHotKey() }
+        }
     }
 
     // MARK: Status item
@@ -84,7 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showMenu() {
         let menu = NSMenu()
-        let ask = NSMenuItem(title: "Ask Muon…   \(HotKey.Preset.current.rawValue)", action: #selector(openPalette), keyEquivalent: "")
+        let ask = NSMenuItem(title: "Ask Muon…   \(HotKey.currentCombo.label)", action: #selector(openPalette), keyEquivalent: "")
         ask.target = self
         menu.addItem(ask)
         menu.addItem(.separator())

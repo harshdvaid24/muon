@@ -104,7 +104,7 @@ Muon understands plain language. These are examples, not a fixed syntax.
 ### Ways in
 | Where | How |
 |---|---|
-| Keyboard | `⇧⌥Space` opens the palette (change it in Settings) |
+| Keyboard | `⇧⌥Space` opens the palette — or record any shortcut in **Settings › Shortcut › Record** |
 | Menu bar | Click the icon; right-click for model status, macros and Settings |
 | Spotlight, Shortcuts, Siri | **Ask Muon**, **Open Project**, **Run Macro** |
 | Scripts, Raycast | `open "muon://ask?q=what%20is%20taking%20space%20in%20~/Downloads"` |
@@ -149,7 +149,9 @@ lms get qwen/qwen3.5-9b@4bit --mlx -y    # main model (~6 GB)
 lms get qwen/qwen3.5-4b@4bit --mlx -y    # low-memory fallback (~3 GB)
 ```
 
-Then right-click the menu bar icon → **Settings**: pick a hotkey, review allowed folders, and grant **Accessibility** if you want menu commands in other apps.
+Then right-click the menu bar icon → **Settings**: record your shortcut (default `⇧⌥Space`), review allowed folders, and grant **Accessibility** if you want menu commands in other apps.
+
+> **Shortcut does nothing?** Another app may own that combination. Open Settings › Shortcut › **Record** and press a different one — Muon registers exactly what your keyboard sends. Clicking the menu bar icon always works.
 
 > Muon is ad-hoc signed for local use. On first launch, right-click the app → **Open**.
 
