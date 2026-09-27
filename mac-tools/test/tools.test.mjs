@@ -46,7 +46,7 @@ test("findFiles finds by name (rg fallback works even before Spotlight indexes)"
 });
 test("listProjects includes Muon", async () => {
   const r = await s.tool("listProjects");
-  assert.match(r.text, /~\/Work\/Muon\t/);
+  assert.match(r.text, /~\/Work\/Muon\t/i);   // on-disk case may differ (CI: ~/work)
 });
 test("getSystemStats and listRunningApps return data", async () => {
   assert.match((await s.tool("getSystemStats")).text, /RAM: \d+ GB total/);
@@ -76,4 +76,17 @@ test("openPath refuses executables, app bundles and terminal apps", async () => 
   assert.ok(term.isError && /terminal/i.test(term.text), term.text);
   const list = await s.call("tools/list");
   assert.match(list.result.tools.find((t) => t.name === "openPath").description, /never runs executables/i);
+});
+
+test("allowed roots match by real path, so a root spelled in different case still works (APFS is case-insensitive)", async () => {
+  const root = path.join(SANDBOX, "caseroot");
+  await fs.mkdir(root, { recursive: true });
+  await fs.writeFile(path.join(root, "f.txt"), "case ok\n");
+  const s2 = startServer({ MUON_ALLOWED_ROOTS: root.toUpperCase() });   // configured in a different case than on disk
+  try {
+    await s2.init();
+    const r = await s2.tool("readFile", { path: path.join(root, "f.txt") });
+    assert.equal(r.isError, false, r.text);
+    assert.equal(r.text, "case ok\n");
+  } finally { s2.close(); }
 });

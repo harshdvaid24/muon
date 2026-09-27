@@ -3,6 +3,7 @@
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
+import { realpathSync } from "node:fs";
 
 export const HOME = os.homedir();
 
@@ -13,14 +14,19 @@ export function expandHome(p: string): string {
 }
 
 const DEFAULT_ALLOWED = ["~/Projects", "~/Work", "~/Downloads", "~/Documents", "~/Desktop"];
+
+/** On-disk spelling of a path (APFS is case-insensitive; realpath returns the real case). Missing paths stay as typed. */
+function canonical(p: string): string {
+  try { return realpathSync.native(p); } catch { return p; }   // .native = OS realpath: returns the on-disk case
+}
 const envRoots = process.env.MUON_ALLOWED_ROOTS;
 export const ALLOWED_ROOTS: string[] = (envRoots ? envRoots.split(":").filter(Boolean) : DEFAULT_ALLOWED)
-  .map((p) => path.resolve(expandHome(p)));
+  .map((p) => canonical(path.resolve(expandHome(p))));
 
 export const DENIED_ROOTS: string[] = [
   "~/Library", "~/.ssh", "~/.gnupg", "~/.aws", "~/.config", "~/.docker", "~/.kube",
   "/System", "/private", "/usr", "/bin", "/sbin", "/Library", "/etc", "/var", "/Applications",
-].map((p) => path.resolve(expandHome(p)));
+].map((p) => canonical(path.resolve(expandHome(p))));
 
 export class PathError extends Error {
   constructor(message: string, public readonly input: string) { super(message); this.name = "PathError"; }
