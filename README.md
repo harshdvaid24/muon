@@ -227,14 +227,14 @@ Crash reports are read from `~/Library/Logs/DiagnosticReports` only, read-only. 
 ## How it works
 
 ```mermaid
-flowchart LR
-    A["Ask<br/>type · speak · drop a file"] --> B["Parse<br/>0 ms, no model"]
-    B --> C["Memory<br/>seen before? ms"]
-    C --> D["Apple on-device model<br/>~1 s"]
-    D -. "multi-step, images,<br/>very long text" .-> E["Local LLM<br/>LM Studio, on demand"]
-    D --> F["Typed tool + card<br/>never a shell"]
+flowchart TD
+    A["Ask: type, speak, drop a file"] --> B["Parse directly · 0 ms"]
+    B --> C["Memory · repeats in ms"]
+    C --> D["Apple on-device model · ~1 s"]
+    D --> F["Typed tool + confirmation card"]
+    D -. "multi-step · images · long text" .-> E["Local LLM · LM Studio, on demand"]
     E --> F
-    F --> G["Answer<br/>and Muon learns"]
+    F --> G["Answer · Muon learns"]
 ```
 
 Most requests stop at the first three boxes. The big model loads only when needed and unloads after five minutes. Every change goes through a confirmation card.
