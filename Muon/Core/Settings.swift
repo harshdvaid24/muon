@@ -8,7 +8,11 @@ enum Settings {
         static let lmBaseURL = "lmBaseURL", model = "model", fallbackModel = "fallbackModel", modelTTL = "modelTTL"
         static let nodePath = "nodePath", mcpServerPath = "mcpServerPath", allowedRoots = "allowedRoots"
         static let confidence = "confidenceThreshold", lmsPath = "lmsPath", alwaysAllow = "alwaysAllow"
+        static let voiceAutoListen = "voiceAutoListen", speakReplies = "speakReplies"
     }
+
+    static var voiceAutoListen: Bool { d.bool(forKey: Key.voiceAutoListen) }
+    static var speakReplies: Bool { d.object(forKey: Key.speakReplies) as? Bool ?? true }
 
     static var lmBaseURL: String { d.string(forKey: Key.lmBaseURL) ?? "http://127.0.0.1:1234" }
     static var model: String { d.string(forKey: Key.model) ?? "qwen/qwen3.5-9b" }

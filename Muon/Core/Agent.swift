@@ -73,7 +73,7 @@ final class Agent {
         return await resolver().resolve(s, memory: memory).first?.path
     }
     static let notUnderstood = "I didn't understand that. Try: open <app>, find <files>, open <project> in <editor>, quit <app>, search the web, or ask about memory/disk. Prefix with “agent:” to force the larger model."
-    static let greetings: Set<String> = ["hi", "hello", "hey", "yo", "hiya", "sup", "hi there", "hello there", "hey there", "howdy", "good morning", "good afternoon", "good evening", "thanks", "thank you", "thankyou", "thx", "ty", "how are you", "how are you doing", "whats up", "what can you do", "help", "who are you"]
+    static let greetings: Set<String> = ["hi", "hello", "hey", "yo", "hiya", "sup", "hi there", "hello there", "hey there", "howdy", "good morning", "good afternoon", "good evening", "thanks", "thank you", "thankyou", "thx", "ty", "how are you", "how are you doing", "whats up", "who are you"]
     static let cancelledMarker = "[[cancelled]]"
 
     func run(_ query: String, approver: Approver, status: @escaping (String) -> Void, forceTier: Int? = nil, translated: Bool = false) async -> AgentOutput {
@@ -90,6 +90,13 @@ final class Agent {
         // "undo" reverses the last automated move or rename.
         if ["undo", "undo last", "undo that", "revert"].contains(Memory.normalize(q)) {
             return await runUndo(approver: approver, status: status)
+        }
+
+        // "what can you do" / "help": the catalog, no model.
+        if Help.matches(q) {
+            out.tier = 0
+            out.result = TextResult(text: Help.text, label: "What Muon can do", source: "help")
+            return out
         }
 
         // "every monday archive the screenshots…" creates a rule (only deterministic cleanups qualify).

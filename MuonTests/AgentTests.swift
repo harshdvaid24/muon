@@ -24,7 +24,7 @@ import Testing
     struct Deny: Approver { func approve(_ a: PendingAction) async -> ApprovalDecision { .cancel } }
 
     @Test func greetingSetCoversCommonHellos() {
-        for g in ["hi", "Hello", "hey there", "thanks", "what can you do"] {
+        for g in ["hi", "Hello", "hey there", "thanks", "who are you"] {
             #expect(Agent.greetings.contains(Memory.normalize(g)), "\(g) should be a greeting")
         }
         #expect(!Agent.greetings.contains(Memory.normalize("open xcode")))

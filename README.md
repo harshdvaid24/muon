@@ -25,6 +25,8 @@
 
 Press `⇧⌥Space` and say what you need. Muon uses Apple's on-device model for the everyday things people open a chatbot for, and typed tools for the things they do by hand. It is a menu bar app with no background process and no idle load. Nothing leaves your Mac unless you ask for a web page.
 
+Type it, or press `⌘⇧M` and say it. Drop a file on the palette, press `⌘O`, or `⌘V` a copied image or file, then ask about it. Type `what can you do` for the full catalog inside the app.
+
 ## What it does for you
 
 | | |
@@ -51,6 +53,8 @@ Muon has no indexer and no background job. It learns from what you do with it.
 
 **Memory.** Repeated requests are answered from a capped local cache in milliseconds, with no model at all. Muon learns your project aliases. `save macro <name>` replays a multi-step action by name.
 
+**Recent.** Your recent requests sit under the suggestions, most used first. `↑` `↓` walk them, `⇥` puts one in the field to edit, `↩` runs it. With something typed, `↑` `↓` cycle through recent requests like a shell.
+
 ## Everything you can ask
 
 Muon understands plain language. These are examples. There is no fixed syntax.
@@ -70,6 +74,7 @@ Copy text in any app, then ask. Every result has **Copy** and **Paste**. Paste g
 | `extract the action items` | Also dates, amounts, emails, names, links and key points |
 | `draft an email about the delayed shipment` | Writes an email from scratch |
 | `summarize: <text>` | Inline form, no clipboard needed |
+| *(drop a file, `⌘O`, or `⌘V` a copied file, then)* `fix grammar` · `who is the tenant` | Runs the request on the attached file |
 
 On-device, about one second. Long text goes to the local LM Studio model automatically, or is processed in parts.
 
@@ -95,12 +100,14 @@ PDFs that contain only scanned pages are read with on-device OCR.
 | `describe ~/Desktop/a.png: which app is this` | Image understanding via the local vision model in LM Studio |
 | `compare ~/Desktop/actual.png with ~/Designs/expected.png` | Lists the visual differences |
 | `rename my screenshots` | Names by content, for example `2026-09-27-xcode-build-error-reanimated.png`. One confirmation |
+| *(`⌘V` a copied image, then)* `explain this` · `which app is this` | Works on the pasted image |
 
 Settings › Automation › **Name new screenshots by their content** names each screenshot as it lands. `undo` reverts the last one.
 
 ### Voice
 | Ask | What happens |
 |---|---|
+| `⌘⇧M`, then speak | Live on-device transcription into the field; the request runs when you pause. Spoken requests get spoken replies (Settings › Voice) |
 | `transcribe ~/Downloads/call.m4a` | Transcript, on-device SpeechAnalyzer |
 | `meeting notes from ~/Downloads/standup.mp4` | Summary, decisions and action items. Audio and video files |
 
@@ -158,11 +165,14 @@ Crash reports are read from `~/Library/Logs/DiagnosticReports` only, read-only. 
 | `undo` | Reverses the last automated move or rename |
 | *(repeat any request)* | Answered from local memory in milliseconds, no model |
 | `save macro morning` | Saves your last multi-step actions. Type `morning` to replay |
+| `what can you do` · `help` | The full catalog, inside the app, no model |
 
 ### Ways in
 | Where | How |
 |---|---|
-| Keyboard | `⇧⌥Space` opens the palette. Record any shortcut in **Settings › Shortcut › Record** |
+| Keyboard | `⇧⌥Space` opens the palette. Record any shortcut in **Settings › Shortcut › Record**. Inside: `↑` `↓` suggestions and recent requests, `⇥` edit, `⌘O` attach, `⌘V` paste an image or file, `⌘⇧M` talk |
+| Voice | `⌘⇧M` or the mic button, the menu bar's **Talk to Muon**, or `open muon://listen`. **Settings › Voice** can start listening whenever the palette opens |
+| Files | Drop a file or folder on the palette, or press `⌘O`. Pasted images are kept under `~/Library/Application Support/Muon/Pasted` (newest 20) |
 | Menu bar | Click the icon. Right-click for model status, macros and Settings |
 | Spotlight, Shortcuts, Siri | App Intents: **Ask Muon**, **Open Project**, **Run Macro** |
 | Scripts, Raycast | `open "muon://ask?q=fix%20grammar"` |

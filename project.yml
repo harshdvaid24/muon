@@ -24,7 +24,7 @@ targets:
       properties:
         CFBundleName: Muon
         CFBundleDisplayName: Muon
-        CFBundleShortVersionString: "0.2.0"
+        CFBundleShortVersionString: "0.3.0"
         CFBundleVersion: "1"
         LSUIElement: true
         LSMinimumSystemVersion: "26.0"
@@ -34,6 +34,7 @@ targets:
             CFBundleURLSchemes: [muon]
         NSAppleEventsUsageDescription: Muon asks apps to quit and runs menu commands you request.
         NSSpeechRecognitionUsageDescription: Muon transcribes audio files you choose, on-device.
+        NSMicrophoneUsageDescription: Muon listens only while the mic is on, to type your request. Speech is recognized on-device.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
     entitlements:

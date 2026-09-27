@@ -1,14 +1,16 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct PaletteView: View {
     @ObservedObject var model: PaletteModel
+    @ObservedObject private var voice = Voice.shared
+    @State private var dropping = false
     var onClose: () -> Void
     var onSize: (CGSize) -> Void
     @FocusState private var focused: Bool
     @Namespace private var glassNS
 
-    private var showIdle: Bool { model.query.isEmpty && model.rows.isEmpty && model.answer == nil && model.result == nil && model.pending == nil && model.status == nil && !model.idleRows.isEmpty }
-    private var hasBody: Bool { !model.rows.isEmpty || model.answer != nil || model.result != nil || model.status != nil || model.pending != nil || model.note != nil || showIdle }
+    private var hasBody: Bool { !model.rows.isEmpty || model.answer != nil || model.result != nil || model.status != nil || model.pending != nil || model.note != nil || model.showsIdle || voice.problem != nil }
 
     var body: some View {
         GlassEffectContainer(spacing: 12) {
@@ -21,8 +23,9 @@ struct PaletteView: View {
                     if let result = model.result { resultBlock(result) }
                     if let answer = model.answer { answerBlock(answer) }
                     if !model.rows.isEmpty { results }
-                    if showIdle { idleList }
+                    if model.showsIdle { idleList }
                     if let note = model.note { noteRow(note) }
+                    if let problem = voice.problem { noteRow(problem) }
                     if let footer = model.footer, model.pending == nil, model.status == nil { footerRow(footer) }
                 }
             }
@@ -30,7 +33,13 @@ struct PaletteView: View {
             .fixedSize(horizontal: false, vertical: true)
             .glassEffect(.regular, in: .rect(cornerRadius: 26))
             .glassEffectID("palette", in: glassNS)
+            .overlay {
+                if dropping {
+                    RoundedRectangle(cornerRadius: 26).strokeBorder(.tint, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
+                }
+            }
         }
+        .onDrop(of: [.fileURL], isTargeted: $dropping) { handleDrop($0) }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { onSize($0) }
         .onExitCommand { if model.escape() { onClose() } }
         .onAppear { focused = true }
@@ -47,21 +56,79 @@ struct PaletteView: View {
                 .resizable()
                 .frame(width: 20, height: 20)
                 .foregroundStyle(.secondary)
-            TextField("Ask Muon…", text: $model.query)
+            if let a = model.attachment { attachmentChip(a) }
+            TextField(voice.isListening ? "Listening…" : "Ask Muon…", text: $model.query)
                 .textFieldStyle(.plain)
                 .font(.system(size: 20))
                 .focused($focused)
                 .onSubmit { model.handleReturn() }
                 .onKeyPress(.downArrow) { model.moveSelection(1); return .handled }
                 .onKeyPress(.upArrow) { model.moveSelection(-1); return .handled }
+                .onKeyPress(.tab) { model.editSelection() ? .handled : .ignored }
+                .onKeyPress(phases: .down) { shortcut($0) }
             if model.isBusy {
                 ProgressView().controlSize(.small)
             } else if model.pending == nil {
-                KeyHint(model.query.isEmpty ? "esc" : "↩")
+                micButton
+                KeyHint(model.query.isEmpty && model.attachment == nil ? "esc" : "↩")
             }
         }
         .padding(.horizontal, 20)
         .frame(height: 56)
+    }
+
+    /// ⌘O attach · ⌘⇧M talk · ⌘V with an image or file on the clipboard attaches it (text pastes as usual).
+    private func shortcut(_ press: KeyPress) -> KeyPress.Result {
+        let k = press.characters.lowercased()
+        if press.modifiers == .command, k == "o" { model.onAttach(); return .handled }
+        if press.modifiers == [.command, .shift], k == "m" { model.onListen(); return .handled }
+        if press.modifiers == .command, k == "v", let p = Attachment.fromPasteboard() { model.attachment = p; return .handled }
+        return .ignored
+    }
+
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        guard let p = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }) else { return false }
+        p.loadDataRepresentation(forTypeIdentifier: UTType.fileURL.identifier) { data, _ in
+            guard let data, let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+            DispatchQueue.main.async { model.attachment = url.path; model.focusRequest += 1 }
+        }
+        return true
+    }
+
+    private var micButton: some View {
+        Button { model.onListen() } label: {
+            Image(systemName: voice.isListening ? "waveform" : "mic")
+                .symbolRenderingMode(.hierarchical)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(voice.isListening ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                .symbolEffect(.variableColor.iterative, isActive: voice.isListening)
+                .frame(width: 24, height: 24)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .help("Talk to Muon (⌘⇧M)")
+    }
+
+    private func attachmentChip(_ path: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: Attachment.icon(for: path)).font(.system(size: 12, weight: .medium))
+            Text((path as NSString).lastPathComponent).font(.system(size: 12, weight: .medium)).lineLimit(1).truncationMode(.middle).frame(maxWidth: 170)
+            Button { model.attachment = nil } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }
+                .buttonStyle(.plain)
+                .help("Remove attachment")
+        }
+        .padding(.horizontal, 9).padding(.vertical, 5)
+        .foregroundStyle(.tint)
+        .background(.tint.opacity(0.16), in: .capsule)
+        .transition(.scale.combined(with: .opacity))
+    }
+
+    private func sectionHeader(_ section: String, first: Bool) -> some View {
+        Text(section.uppercased())
+            .font(.system(size: 11, weight: .semibold))
+            .tracking(0.6)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14).padding(.top, first ? 8 : 10).padding(.bottom, 4)
     }
 
     // MARK: Body blocks
@@ -137,11 +204,13 @@ struct PaletteView: View {
 
     private var idleList: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("FOR YOU").font(.system(size: 11, weight: .semibold)).tracking(0.6).foregroundStyle(.secondary).padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 4)
             ForEach(Array(model.idleRows.enumerated()), id: \.element.id) { index, row in
+                if let section = row.section, index == 0 || model.idleRows[index - 1].section != section {
+                    sectionHeader(section, first: index == 0)
+                }
                 ResultRow(row: row, selected: index == model.selection)
                     .contentShape(.rect)
-                    .onTapGesture { row.action?() }
+                    .onTapGesture { model.selection = index; row.action?() }
             }
         }
         .padding(.horizontal, 8).padding(.bottom, 8)
@@ -151,11 +220,7 @@ struct PaletteView: View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, row in
                 if let section = row.section, index == 0 || model.rows[index - 1].section != section {
-                    Text(section.uppercased())
-                        .font(.system(size: 11, weight: .semibold))
-                        .tracking(0.6)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 14).padding(.top, index == 0 ? 8 : 10).padding(.bottom, 4)
+                    sectionHeader(section, first: index == 0)
                 }
                 ResultRow(row: row, selected: index == model.selection)
                     .contentShape(.rect)
@@ -183,6 +248,7 @@ private struct ResultRow: View {
                 if let s = row.subtitle { Text(s).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1) }
             }
             Spacer()
+            if selected, row.fill != nil { KeyHint("⇥ edit") }
             if selected, row.action != nil { KeyHint("↩") }
         }
         .padding(.horizontal, 12)

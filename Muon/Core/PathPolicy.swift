@@ -41,6 +41,7 @@ enum PathPolicy {
             }
             real = ([canonical(base)] + tail).joined(separator: "/")
         }
+        if under(real, canonical(Attachment.pastedDir)) { return real }   // pasted images, read by the app's own tools
         if deniedRoots.map(canonical).contains(where: { under(real, $0) }) { throw Failure.protected(real) }
         guard Settings.allowedRoots.map(canonical).contains(where: { under(real, $0) }) else { throw Failure.outside(real) }
         return real

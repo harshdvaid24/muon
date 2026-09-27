@@ -42,15 +42,18 @@ struct WritingIntent: Equatable {
         if q.contains("://") { return nil }
         // "translate to french: hello there" → inline text after the first colon
         var inline: String?
-        if let colon = q.firstIndex(of: ":"), q.distance(from: q.startIndex, to: colon) < 60 {
+        if let colon = q.firstIndex(of: ":") {
             let head = String(q[..<colon]).trimmingCharacters(in: .whitespaces)
             let tail = String(q[q.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
-            if !tail.isEmpty, !head.contains(" http") { inline = tail; q = head }
+            // A short head, or one that is mostly a file path ("ask \"~/My Docs/lease.pdf\": who pays").
+            if !tail.isEmpty, !head.contains(" http"), head.count < 60 || !PathPolicy.paths(in: head).isEmpty { inline = tail; q = head }
         }
-        // file source: "summarize ~/Documents/x.txt" — only text-like files; documents are handled by DocumentIntent
+        // file source: "summarize ~/Documents/x.txt", quoted paths may contain spaces
         var file: String?
-        if let r = q.range(of: #"(~/|/)[^\s]+"#, options: .regularExpression) {
-            file = String(q[r]); q = q.replacingCharacters(in: r, with: "").trimmingCharacters(in: .whitespaces)
+        if let p = PathPolicy.paths(in: q).first {
+            file = p
+            q = q.replacingOccurrences(of: "\"\(p)\"", with: "").replacingOccurrences(of: p, with: "")
+                .replacingOccurrences(of: "  ", with: " ").trimmingCharacters(in: .whitespaces)
         }
         // "ask ~/x.txt: who is the owner" → the file is the source and the text after the colon is the question.
         if let f = file, let inl = inline, q.range(of: #"^(ask|question)$"#, options: [.regularExpression, .caseInsensitive]) != nil {

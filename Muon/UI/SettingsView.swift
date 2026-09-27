@@ -21,6 +21,8 @@ struct SettingsView: View {
     @AppStorage("layaURL") private var layaURL = "http://127.0.0.1:8765"
     @AppStorage("hotkey") private var hotkey = HotKey.Preset.shiftOptSpace.rawValue
     @AppStorage("sounds") private var sounds = true
+    @AppStorage(Settings.Key.voiceAutoListen) private var voiceAutoListen = false
+    @AppStorage(Settings.Key.speakReplies) private var speakReplies = true
     @State private var axTrusted = AXIsProcessTrusted()
 
     var body: some View {
@@ -84,6 +86,12 @@ struct SettingsView: View {
                 TextField("Node binary", text: $nodePath, prompt: Text(Settings.probeNode() ?? "/usr/local/bin/node"))
                 TextField("mac-tools index.js", text: $mcpServerPath, prompt: Text(Settings.mcpServerPath))
                 Button("Forget “always allow” choices") { Settings.d.removeObject(forKey: Settings.Key.alwaysAllow) }
+            }
+            Section("Voice") {
+                Toggle("Start listening when the palette opens", isOn: $voiceAutoListen)
+                Toggle("Speak replies to spoken requests", isOn: $speakReplies)
+                Text("Press ⌘⇧M or click the mic, say what you need and pause; it runs. Speech is recognized on-device and nothing is recorded.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Automation") {
                 Toggle("Name new screenshots by their content", isOn: $autoName)

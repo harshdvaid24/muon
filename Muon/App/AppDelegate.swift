@@ -101,6 +101,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let ask = NSMenuItem(title: "Ask Muon…   \(HotKey.currentCombo.label)", action: #selector(openPalette), keyEquivalent: "")
         ask.target = self
         menu.addItem(ask)
+        let talk = NSMenuItem(title: "Talk to Muon…   ⌘⇧M", action: #selector(talk), keyEquivalent: "")
+        talk.target = self
+        menu.addItem(talk)
         menu.addItem(.separator())
         let modelItem = NSMenuItem(title: "Model: checking…", action: nil, keyEquivalent: "")
         menu.addItem(modelItem)
@@ -142,6 +145,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openPalette() { palette.show(anchor: nil) }
 
+    @objc private func talk() {
+        palette.show(anchor: nil)
+        Task { await Voice.shared.start() }
+    }
+
+    /// ⌘O: attach a file or folder to the request.
+    private func pickAttachment() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Attach a file or folder to your request"
+        NSApp.activate()
+        let ok = panel.runModal() == .OK
+        if ok, let url = panel.url { palette.model.attachment = url.path }
+        palette.show(anchor: nil)
+    }
+
     @objc private func runMacro(_ sender: NSMenuItem) {
         guard let name = sender.representedObject as? String else { return }
         palette.show(anchor: nil)
@@ -172,6 +193,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             palette.show(anchor: nil)
         case "settings":
             openSettings()
+        case "listen":
+            talk()
         case "ask":
             let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "q" }?.value ?? ""
             palette.show(anchor: nil)
@@ -190,7 +213,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func wireAgent() {
         let m = palette.model
         m.handler = { [weak self] q in await self?.handle(q) }
-        palette.onShow = { [weak self] in self?.refreshProactive() }
+        palette.onShow = { [weak self] in
+            self?.refreshProactive()
+            if Settings.voiceAutoListen { Task { await Voice.shared.start() } }
+        }
+        palette.onHide = { Voice.shared.cancel(); Speaker.stop() }
+        m.onAttach = { [weak self] in self?.pickAttachment() }
+        m.onListen = { Voice.shared.toggle() }
+        Voice.shared.onText = { text in m.query = text }
+        Voice.shared.onFinish = { text in
+            guard !text.isEmpty else { return }
+            m.query = text; m.spoken = true; m.submit()
+        }
         ScreenshotWatcher.shared.apply()
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
             Task { await Rules.runDue(agent: Agent.shared) }
@@ -208,11 +242,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             m.answer = Agent.shared.saveMacro(named: String(q.dropFirst(11)).trimmingCharacters(in: .whitespaces))
             return
         }
+        if q.count <= 200, !q.contains("\n") { Agent.shared.memory?.bump(kind: "query", name: q) }
+        let spoken = m.spoken
         let started = Date()
         let out = await Agent.shared.run(q, approver: palette) { s in Task { @MainActor in m.status = s } }
         m.status = nil
         m.answer = out.cancelled ? "Cancelled." : out.answer
         m.result = out.result
+        if spoken, Settings.speakReplies, !out.cancelled, let say = out.answer ?? out.result?.text { Speaker.speak(say) }
         m.canPaste = AXIsProcessTrusted()
         m.note = out.note
         if out.cancelled { Sound.play(.cancel) }
@@ -248,7 +285,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let m = palette.model
         func rows(_ s: [ProactiveSuggestion]) -> [PaletteModel.Row] {
             s.map { sug in
-                PaletteModel.Row(icon: sug.icon, title: sug.title, subtitle: sug.subtitle, section: nil) { [weak self] in
+                PaletteModel.Row(icon: sug.icon, title: sug.title, subtitle: sug.subtitle, section: "For you") { [weak self] in
                     guard let self else { return }
                     switch sug.action {
                     case .query(let q): m.query = q; m.submit()
@@ -258,11 +295,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
-        if let cached = Proactive.cached() { m.idleRows = rows(cached); return }
-        m.idleRows = rows(Proactive.clipboardSuggestions() + Proactive.undoSuggestion())
+        // Recent requests (by frecency) after the suggestions; ↑/↓ walk them, ⇥ edits, ↩ runs. First run: how to get started.
+        func recents() -> [PaletteModel.Row] {
+            let memory = Agent.shared.memory
+            m.history = memory?.top(kind: "query", n: 30) ?? []
+            let recent = Array(m.history.prefix(6))
+            if recent.isEmpty {
+                return [PaletteModel.Row(icon: "questionmark.circle", title: "What can I ask?", subtitle: "Everything Muon can do, with examples", section: "Get started", fill: "what can you do") { m.query = "what can you do"; m.submit() }]
+            }
+            return recent.map { q in PaletteModel.Row(icon: "clock.arrow.circlepath", title: Agent.short(q), subtitle: nil, section: "Recent", fill: q) { m.query = q; m.submit() } }
+        }
+        if let cached = Proactive.cached() { m.idleRows = rows(cached) + recents(); return }
+        m.idleRows = rows(Proactive.clipboardSuggestions() + Proactive.undoSuggestion()) + recents()
         Task.detached(priority: .utility) {
             let fresh = await Proactive.refresh(memory: Agent.shared.memory)
-            await MainActor.run { m.idleRows = rows(fresh) }
+            await MainActor.run { m.idleRows = rows(fresh) + recents() }
         }
     }
 

@@ -74,9 +74,12 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     /// Set by the app: refresh "for you" rows, run due rules.
     var onShow: (() -> Void)?
+    /// Set by the app: stop listening, stop speaking.
+    var onHide: (() -> Void)?
 
     func hide() {
         model.pending?.decide(.cancel)
+        onHide?()
         panel.orderOut(nil)
         // If nothing else took focus (Esc, quit-app…), hand it back to the app the user came from.
         let me = ProcessInfo.processInfo.processIdentifier
