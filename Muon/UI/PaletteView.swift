@@ -7,7 +7,7 @@ struct PaletteView: View {
     @FocusState private var focused: Bool
     @Namespace private var glassNS
 
-    private var hasBody: Bool { !model.rows.isEmpty || model.answer != nil || model.status != nil || model.pending != nil || model.note != nil }
+    private var hasBody: Bool { !model.rows.isEmpty || model.answer != nil || model.result != nil || model.status != nil || model.pending != nil || model.note != nil }
 
     var body: some View {
         GlassEffectContainer(spacing: 12) {
@@ -17,6 +17,7 @@ struct PaletteView: View {
                     Divider().padding(.horizontal, 16)
                     if let status = model.status { statusRow(status) }
                     if let pending = model.pending { ConfirmCard(pending: pending) }
+                    if let result = model.result { resultBlock(result) }
                     if let answer = model.answer { answerBlock(answer) }
                     if !model.rows.isEmpty { results }
                     if let note = model.note { noteRow(note) }
@@ -82,6 +83,38 @@ struct PaletteView: View {
         }
         .frame(maxHeight: 280)
         .padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 14)
+    }
+
+    private func resultBlock(_ r: TextResult) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text(r.label).font(.system(size: 13, weight: .semibold))
+                Text(r.source).font(.system(size: 11)).foregroundStyle(.secondary)
+                    .padding(.horizontal, 7).padding(.vertical, 3).background(.primary.opacity(0.08), in: .rect(cornerRadius: 6))
+                Spacer()
+            }
+            ScrollView {
+                Text(r.text)
+                    .font(.system(size: 14))
+                    .lineSpacing(3)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxHeight: 320)
+            HStack(spacing: 8) {
+                Spacer()
+                if model.canPaste {
+                    Button { model.onCopy(r.text) } label: { HStack(spacing: 6) { Image(systemName: "doc.on.doc"); Text("Copy") } }
+                        .buttonStyle(.glass)
+                    Button { model.onPaste(r.text) } label: { HStack(spacing: 6) { Image(systemName: "arrow.down.doc"); Text("Paste") } }
+                        .buttonStyle(.glassProminent)
+                } else {
+                    Button { model.onCopy(r.text) } label: { HStack(spacing: 6) { Image(systemName: "doc.on.doc"); Text("Copy") } }
+                        .buttonStyle(.glassProminent)
+                }
+            }
+        }
+        .padding(.horizontal, 22).padding(.top, 14).padding(.bottom, 16)
     }
 
     private func noteRow(_ text: String) -> some View {

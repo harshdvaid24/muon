@@ -19,8 +19,16 @@ struct Suggestion {
     let learnAlias: (term: String, path: String)?
 }
 
+/// A generated text the user will copy or paste somewhere (rewrite, summary, translation…).
+struct TextResult {
+    var text: String
+    var label: String
+    var source: String
+}
+
 struct AgentOutput {
     var tier = 0
+    var result: TextResult?
     var answer: String?
     var suggestions: [Suggestion] = []
     var results: [ActionResult] = []
@@ -77,6 +85,11 @@ final class Agent {
 
         if let macro = macro(for: q) {
             return await runMacro(macro, approver: approver, status: status)
+        }
+
+        // Writing help ("fix grammar", "translate to hindi", "summarize this") is parsed deterministically too.
+        if forceTier == nil, let w = WritingIntent.parse(q) {
+            return finish(await runWriting(w, query: q, status: status), query: q)
         }
 
         // File cleanup is parsed deterministically: exact files, one confirmation, no model planning.
@@ -273,6 +286,38 @@ final class Agent {
         return out
     }
 
+    // MARK: Writing
+
+    func runWriting(_ w: WritingIntent, query: String, status: @escaping (String) -> Void) async -> AgentOutput {
+        var out = AgentOutput()
+        out.tier = 1
+        let input: String
+        let sourceLabel: String
+        switch w.source {
+        case .inline(let t): input = t; sourceLabel = "typed text"
+        case .clipboard:
+            guard let c = TextTools.clipboardText() else {
+                out.answer = "Copy the text first (⌘C in any app), then ask again. Or type it after a colon: “\(query): your text”."
+                return out
+            }
+            input = c; sourceLabel = "clipboard · \(c.split(whereSeparator: \.isWhitespace).count) words"
+        case .file(let p):
+            do {
+                let real = try PathPolicy.resolve(p)
+                input = try Documents.text(at: real, status: status)
+                sourceLabel = (real as NSString).lastPathComponent
+            } catch { out.answer = error.localizedDescription; return out }
+        }
+        do {
+            let text = try await TextTools.generate(instruction: w.instruction, input: input, status: status)
+            out.result = TextResult(text: text, label: w.label, source: sourceLabel)
+            memory?.bump(kind: "writing", name: w.label)
+        } catch {
+            out.answer = error.localizedDescription
+        }
+        return out
+    }
+
     // MARK: Cleanup
 
     /// Resolves the folder, finds the exact matching files, asks once, then moves or trashes them.
@@ -352,7 +397,7 @@ final class Agent {
             out.answer = "Tool server failed to start: \(error.localizedDescription)"
             return out
         }
-        let tools = MCPClient.shared.tools.filter { $0.name != "ping" }
+        let tools = MCPClient.shared.tools.filter { $0.name != "ping" } + HostTools.all.map(\.asMCPTool)
         let projects = await resolver().projects
         let context = "Home folder: \(NSHomeDirectory()). Allowed folders: \(Settings.allowedRoots.joined(separator: ", ")). "
             + "Known projects: " + projects.prefix(40).map { "\($0.name) (\(Self.short($0.path)), \($0.type))" }.joined(separator: "; ") + "."
@@ -390,8 +435,10 @@ final class Agent {
     // MARK: Execution with permission
 
     func execute(_ tool: String, _ args: [String: Any], approver: Approver, status: @escaping (String) -> Void) async -> ActionResult {
-        do { try await MCPClient.shared.ensureStarted() }
-        catch { return ActionResult(tool: tool, args: args, text: "Tool server failed to start: \(error.localizedDescription)", ok: false) }
+        if HostTools.tool(named: tool) == nil {
+            do { try await MCPClient.shared.ensureStarted() }
+            catch { return ActionResult(tool: tool, args: args, text: "Tool server failed to start: \(error.localizedDescription)", ok: false) }
+        }
         let risk = Permission.risk(named: tool)
         if risk != .auto {
             let key = risk == .confirm ? Permission.alwaysKey(tool: tool, args: args) : nil
@@ -408,6 +455,10 @@ final class Agent {
             }
         }
         status("Running \(tool)…")
+        if let host = HostTools.tool(named: tool) {
+            do { return ActionResult(tool: tool, args: args, text: try await host.run(args), ok: true) }
+            catch { return ActionResult(tool: tool, args: args, text: error.localizedDescription, ok: false) }
+        }
         do {
             let (text, isError) = try await MCPClient.shared.call(tool, args: args)
             return ActionResult(tool: tool, args: args, text: text, ok: !isError)

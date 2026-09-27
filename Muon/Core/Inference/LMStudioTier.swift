@@ -88,6 +88,24 @@ enum LMStudioTier {
         try? p.run()
     }
 
+    /// Plain chat completion (no tools) for writing and document tasks. Picks the model the resource gate allows.
+    static func complete(system: String, user: String, status: @escaping (String) -> Void = { _ in }) async throws -> String {
+        guard await ensureServer() else { throw LMError.unreachable }
+        let gate = ResourceGate.check()
+        var model = gate.ok && !gate.useSmall ? Settings.model : Settings.fallbackModel
+        let models = await availableModels()
+        if !models.isEmpty, !models.contains(model) { model = models.contains(Settings.model) ? Settings.model : (models.first { $0.lowercased().contains("qwen") } ?? model) }
+        await ensureLoaded(model, status: status)
+        let body: [String: Any] = [
+            "model": model, "messages": [["role": "system", "content": system], ["role": "user", "content": user]],
+            "temperature": 0.3, "max_tokens": 2500, "stream": false, "ttl": Settings.modelTTL,
+            "chat_template_kwargs": ["enable_thinking": false],
+        ]
+        let resp = try await post("/v1/chat/completions", body)
+        guard let msg = (resp["choices"] as? [[String: Any]])?.first?["message"] as? [String: Any], let text = msg["content"] as? String else { throw LMError.badResponse }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Runs the tool-calling loop. `execute` performs a tool call (with permission) and returns its text.
     static func run(query: String, model: String, tools: [MCPClient.Tool],
                     context: String, status: @escaping (String) -> Void,

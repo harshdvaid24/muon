@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import Carbon
 import SwiftUI
 
@@ -189,6 +190,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func wireAgent() {
         let m = palette.model
         m.handler = { [weak self] q in await self?.handle(q) }
+        m.onCopy = { text in TextTools.copy(text); Sound.play(.success) }
+        m.onPaste = { [weak self] text in self?.palette.pasteIntoPreviousApp(text) }
+        m.canPaste = AXIsProcessTrusted()
     }
 
     private func handle(_ q: String) async {
@@ -202,10 +206,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let out = await Agent.shared.run(q, approver: palette) { s in Task { @MainActor in m.status = s } }
         m.status = nil
         m.answer = out.cancelled ? "Cancelled." : out.answer
+        m.result = out.result
+        m.canPaste = AXIsProcessTrusted()
         m.note = out.note
         if out.cancelled { Sound.play(.cancel) }
         else if out.results.contains(where: { !$0.ok }) { Sound.play(.error) }
-        else if !out.results.isEmpty || !out.suggestions.isEmpty { Sound.play(.success) }
+        else if !out.results.isEmpty || !out.suggestions.isEmpty || out.result != nil { Sound.play(.success) }
         let secs = Date().timeIntervalSince(started)
         let time = secs < 1 ? "\(Int(secs * 1000)) ms" : String(format: "%.1f s", secs)
         let source = out.tier == 0 ? "from memory" : out.tier == 1 ? "on-device" : (out.model ?? "local model")

@@ -102,3 +102,18 @@ test("moveItems refuses moving a folder into itself", async () => {
   const r = await s.tool("moveItems", { paths: [path.join(SANDBOX, "parent")], destinationFolder: path.join(SANDBOX, "parent/Archive") });
   assert.match(r.text, /^0\/1 moved[\s\S]*into itself/);
 });
+
+test("writeTextFile writes, refuses overwrite and scripts, honors path policy", async () => {
+  const f = path.join(SANDBOX, "notes/summary.md");
+  const r = await s.tool("writeTextFile", { path: f, content: "# Summary\nhello" });
+  assert.match(r.text, /Wrote/);
+  assert.equal(await fs.readFile(f, "utf8"), "# Summary\nhello");
+  const again = await s.tool("writeTextFile", { path: f, content: "x" });
+  assert.ok(again.isError && /already exists/.test(again.text));
+  const over = await s.tool("writeTextFile", { path: f, content: "y", overwrite: true });
+  assert.ok(!over.isError); assert.equal(await fs.readFile(f, "utf8"), "y");
+  const sh = await s.tool("writeTextFile", { path: path.join(SANDBOX, "run.sh"), content: "echo hi" });
+  assert.ok(sh.isError && /script/.test(sh.text));
+  const lib = await s.tool("writeTextFile", { path: "~/Library/x.txt", content: "z" });
+  assert.ok(lib.isError && /protected/.test(lib.text));
+});

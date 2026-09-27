@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 
 /// Borderless, transparent, floating panel hosting the Liquid Glass palette.
@@ -81,6 +82,26 @@ final class PanelController: NSObject, NSWindowDelegate {
                 prev.activate()
             } else {
                 NSApp.hide(nil)
+            }
+        }
+    }
+
+    /// Puts the text on the clipboard, returns to the previous app and presses ⌘V there (needs Accessibility).
+    func pasteIntoPreviousApp(_ text: String) {
+        TextTools.copy(text)
+        let target = previousApp
+        hide()
+        guard AXIsProcessTrusted() else { Sound.play(.success); return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            if let t = target, !t.isTerminated { t.activate() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                let src = CGEventSource(stateID: .combinedSessionState)
+                for down in [true, false] {
+                    let e = CGEvent(keyboardEventSource: src, virtualKey: 9 /* V */, keyDown: down)
+                    e?.flags = .maskCommand
+                    e?.post(tap: .cghidEventTap)
+                }
+                Sound.play(.success)
             }
         }
     }

@@ -100,6 +100,21 @@ export function registerFileOps(server: McpServer): void {
     },
   });
 
+  defineTool(server, "writeTextFile", {
+    description: "Write a text file (notes, summaries, transcripts, CSV) inside allowed folders. Never overwrites unless overwrite is true. Max 2 MB; scripts and executables are refused.",
+    input: { path: z.string().min(1), content: z.string().max(2_000_000), overwrite: z.boolean().optional() },
+    annotations: MUT,
+    handler: async ({ path: p, content, overwrite }) => {
+      const real = await resolveAllowed(p);
+      const ext = path.extname(real).toLowerCase();
+      if ([".sh", ".command", ".tool", ".scpt", ".applescript", ".pkg", ".dmg", ".app", ".plist", ".zsh", ".bash"].includes(ext)) throw new Error(`refusing to write a script or executable (${ext})`);
+      if (!overwrite && (await exists(real))) throw new Error(`${display(real)} already exists (pass overwrite to replace it)`);
+      await fsp.mkdir(path.dirname(real), { recursive: true });
+      await fsp.writeFile(real, content, { mode: 0o644 });
+      return `Wrote ${display(real)} (${content.length} chars)`;
+    },
+  });
+
   defineTool(server, "quitApplication", {
     description: "Gracefully quit a running application (it may ask to save).",
     input: { name: z.string().regex(APP_NAME).describe("Application name, e.g. 'Spotify'") },

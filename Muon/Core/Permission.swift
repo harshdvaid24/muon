@@ -33,6 +33,7 @@ enum Permission {
 
     /// Unknown tools (not in tools/list) default to confirm — never auto.
     static func risk(named name: String) -> Risk {
+        if let h = HostTools.tool(named: name) { return h.destructive ? .destructive : (h.readOnly ? .auto : .confirm) }
         guard let t = MCPClient.shared.tool(named: name) else { return .confirm }
         return risk(t)
     }

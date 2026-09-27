@@ -27,6 +27,7 @@ final class PaletteModel: ObservableObject {
     @Published var rows: [Row] = []
     @Published var selection = 0
     @Published var answer: String?
+    @Published var result: TextResult?
     @Published var note: String?
     @Published var footer: String?
     @Published var status: String?
@@ -53,7 +54,7 @@ final class PaletteModel: ObservableObject {
             action(); return
         }
         lastSubmitted = q
-        rows = []; answer = nil; note = nil; footer = nil; selection = 0
+        rows = []; answer = nil; result = nil; note = nil; footer = nil; selection = 0
         isBusy = true
         Task {
             await handler(q)
@@ -69,7 +70,12 @@ final class PaletteModel: ObservableObject {
 
     func activateSelection() { rows[safe: selection]?.action?() }
 
-    func reset() { query = ""; lastSubmitted = ""; rows = []; answer = nil; note = nil; footer = nil; status = nil; pending = nil; selection = 0 }
+    func reset() { query = ""; lastSubmitted = ""; rows = []; answer = nil; result = nil; note = nil; footer = nil; status = nil; pending = nil; selection = 0 }
+
+    /// Set by the app: copy a result, or paste it into the app the user came from.
+    var onCopy: (String) -> Void = { _ in }
+    var onPaste: (String) -> Void = { _ in }
+    var canPaste = false
 
     /// Esc: cancel a pending card first; only close when nothing is pending.
     func escape() -> Bool {
