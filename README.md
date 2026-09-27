@@ -226,15 +226,23 @@ Crash reports are read from `~/Library/Logs/DiagnosticReports` only, read-only. 
 
 ## How it works
 
+Seven steps, each one doing something most assistants do not.
+
 ```mermaid
 flowchart TD
-    A["You ask: type it, say it, or drop a file on it"] --> B["Muon understands common asks instantly"]
-    B --> C["Asked before? Answered from memory"]
-    C --> D["Your Mac's built-in AI thinks it over (about a second)"]
-    D --> F["Muon does it, and asks you before changing anything"]
-    D -. "big jobs only" .-> E["A larger AI on your Mac, woken up when needed"]
-    E --> F
-    F --> G["You get the answer. Muon remembers for next time"]
+    A["1 · Ask any way you like<br/>Type it, say it, drop a file on it, or right-click any file › Open With › Muon"]
+    B["2 · Understood instantly<br/>Most asks are recognised in 0 ms. No AI needed, no waiting, no guessing"]
+    C["3 · Memory that speeds you up<br/>Anything you have asked before comes back in a blink"]
+    D["4 · Your Mac's own AI thinks it over<br/>About a second. Nothing uploaded, no extra memory used"]
+    E["5 · A bigger brain, only when needed<br/>Wakes up for big jobs, goes back to sleep in five minutes"]
+    F["6 · Does it, safely<br/>Real actions on your Mac, but every change asks you first, and delete means Trash"]
+    G["7 · Gets smarter, not heavier<br/>Learns your shortcuts, suggests what is worth doing, turns repeats into rules"]
+    A --> B --> C --> D --> F --> G
+    D -. "big jobs" .-> E --> F
+    classDef step fill:#14161c,stroke:#7c6cff,stroke-width:2px,color:#f5f5f7
+    classDef ask fill:#7c6cff,stroke:#7c6cff,color:#fff
+    class B,C,D,E,F,G step
+    class A ask
 ```
 
 Everything happens on your Mac. Nothing is uploaded, nothing runs in the background, and nothing is changed without your OK.
