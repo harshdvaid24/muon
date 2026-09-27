@@ -31,7 +31,7 @@ targets:
         NSPrincipalClass: NSApplication
         CFBundleURLTypes:
           - CFBundleURLName: com.harshvaid.Muon
-            CFBundleURLSchemes: [wisp]
+            CFBundleURLSchemes: [muon]
         NSAppleEventsUsageDescription: Muon asks apps to quit and runs menu commands you request.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true

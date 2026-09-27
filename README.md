@@ -117,7 +117,7 @@ Other ways in:
 | `⌃⌥Space` | palette, bottom-center |
 | Menu bar icon | palette under the icon; right-click for model status, macros, Settings |
 | Spotlight / Shortcuts / Siri | App Intents: **Ask Muon**, **Open Project**, **Run Macro** |
-| `open "wisp://ask?q=open%20kathak"` | scripts, Raycast, Shortcuts |
+| `open "muon://ask?q=open%20kathak"` | scripts, Raycast, Shortcuts |
 | `Muon.app/Contents/MacOS/Muon --query "…" [--yes] [--tier 2]` | headless; prints tier, tools, and answer |
 
 ## Safety model

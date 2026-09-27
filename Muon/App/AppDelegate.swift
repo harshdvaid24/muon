@@ -148,7 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
-    // MARK: URL scheme  wisp://show  |  wisp://ask?q=...
+    // MARK: URL scheme  muon://show  |  muon://ask?q=...
 
     @objc private func handleGetURL(_ event: NSAppleEventDescriptor, with reply: NSAppleEventDescriptor) {
         guard let raw = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue,

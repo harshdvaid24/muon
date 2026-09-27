@@ -25,7 +25,7 @@
 			<string>com.harshvaid.Muon</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>wisp</string>
+				<string>muon</string>
 			</array>
 		</dict>
 	</array>
