@@ -8,6 +8,7 @@ import { registerAppTools } from "./tools/apps.js";
 import { registerSystemTools } from "./tools/system.js";
 import { registerFileOps } from "./tools/fileops.js";
 import { registerControlTools } from "./tools/control.js";
+import { registerWebTools } from "./tools/web.js";
 
 export const server = new McpServer({ name: "mac-tools", version: "0.1.0" });
 
@@ -18,6 +19,7 @@ registerAppTools(server);
 registerSystemTools(server);
 registerFileOps(server);
 registerControlTools(server);
+registerWebTools(server);
 
 process.stdin.on("end", () => process.exit(0));
 void rotateAudit();

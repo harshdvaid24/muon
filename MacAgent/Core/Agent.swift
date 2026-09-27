@@ -43,7 +43,8 @@ final class Agent {
     static let complexMarkers = [" and then ", " and which ", " which of ", " older than ", " newer than ", " larger than ", " bigger than ",
                                  " smaller than ", " duplicate", " clean up ", " cleanup ", " organize ", " organise ", " compare ", " how many ",
                                  " count ", " why ", " explain ", " summarize ", " summarise ", " what does ", " total size ", " each of "]
-    static let notUnderstood = "I didn't understand that. Try: open <app>, find <files>, open <project> in <editor>, quit <app>, or ask about memory/disk. Prefix with “agent:” to force the larger model."
+    static let notUnderstood = "I didn't understand that. Try: open <app>, find <files>, open <project> in <editor>, quit <app>, search the web, or ask about memory/disk. Prefix with “agent:” to force the larger model."
+    static let greetings: Set<String> = ["hi", "hello", "hey", "yo", "hiya", "sup", "hi there", "hello there", "hey there", "howdy", "good morning", "good afternoon", "good evening", "thanks", "thank you", "thankyou", "thx", "ty", "how are you", "how are you doing", "whats up", "what can you do", "help", "who are you"]
     static let cancelledMarker = "[[cancelled]]"
 
     func run(_ query: String, approver: Approver, status: @escaping (String) -> Void, forceTier: Int? = nil) async -> AgentOutput {
@@ -55,6 +56,13 @@ final class Agent {
 
         if let macro = macro(for: q) {
             return await runMacro(macro, approver: approver, status: status)
+        }
+
+        // Small talk answers on-device, never as an app launch.
+        if Self.greetings.contains(Memory.normalize(q)), FoundationTier.isAvailable {
+            out.tier = 1
+            out.answer = (try? await FoundationTier.chat(q)) ?? "Hi. I can open apps, find and manage files, run app menu commands, and search the web. What do you need?"
+            return out
         }
 
         let lower = " " + q.lowercased() + " "
@@ -187,6 +195,22 @@ final class Agent {
                 path = p.path
             }
             return await single("listDirectory", ["path": Settings.expand(path)], query: query, out: out, approver: approver, status: status)
+
+        case .chat:
+            out.answer = (try? await FoundationTier.chat(query)) ?? "Hi. Ask me to open an app, find files, run a menu command, or search the web."
+            return out
+
+        case .webSearch:
+            let text = searchText.isEmpty ? (target.isEmpty ? query : target) : searchText
+            return await single("webSearch", ["query": text], query: query, out: out, approver: approver, status: status)
+
+        case .openInBrowser:
+            let text = target.isEmpty ? searchText : target
+            if text.range(of: #"^(https?://|[\w.-]+\.[a-z]{2,})"#, options: [.regularExpression, .caseInsensitive]) != nil {
+                let url = text.hasPrefix("http") ? text : "https://\(text)"
+                return await single("openInBrowser", ["url": url], query: query, out: out, approver: approver, status: status)
+            }
+            return await single("openInBrowser", ["query": text.isEmpty ? query : text], query: query, out: out, approver: approver, status: status)
 
         case .listProjects: return await single("listProjects", [:], query: query, out: out, approver: approver, status: status)
         case .listRunningApps: return await single("listRunningApps", [:], query: query, out: out, approver: approver, status: status)
@@ -378,7 +402,7 @@ final class Agent {
         for line in r.text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init) {
             let pathPart = line.split(separator: "\t").first.map(String.init) ?? line
             let display = pathPart.split(separator: ":").first.map(String.init) ?? pathPart   // "file:line:text" → file
-            if (display.hasPrefix("~/") || display.hasPrefix("/")), out.suggestions.count < 20, r.tool != "listDirectory", r.tool != "readFile" {
+            if (display.hasPrefix("~/") || display.hasPrefix("/")), out.suggestions.count < 20, r.tool != "listDirectory", r.tool != "readFile", r.tool != "webSearch" {
                 let abs = Settings.expand(display)
                 var isDir: ObjCBool = false
                 let exists = FileManager.default.fileExists(atPath: abs, isDirectory: &isDir)

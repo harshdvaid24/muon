@@ -8,6 +8,7 @@ enum ToolName: CaseIterable {
     case openApplication, openProject, openPath, revealInFinder, quitApplication
     case findFiles, searchFiles, searchCode, readFile, listDirectory, listProjects
     case listRunningApps, getSystemStats, moveItems, trashItems
+    case webSearch, openInBrowser, chat
     case complex, unknown
 }
 
