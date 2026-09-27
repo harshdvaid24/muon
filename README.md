@@ -227,37 +227,17 @@ Crash reports are read from `~/Library/Logs/DiagnosticReports` only, read-only. 
 ## How it works
 
 ```mermaid
-flowchart TB
-    K["⇧⌥Space · voice · drop a file · Open With · Finder"] --> P["Liquid Glass palette (Swift, AppKit + SwiftUI)"]
-    P --> D{"Deterministic parsers (0 ms)<br/>writing · documents · screenshots · voice · receipts<br/>cleanup · rules · file names · help · start agent"}
-    D -- "matched" --> T["Host tools (Swift)<br/>Vision OCR · PDFKit · SpeechAnalyzer<br/>FoundationModels · Numbers"]
-    D -- "not matched" --> M{"Memory (SQLite, capped)<br/>intent cache · aliases · macros"}
-    M -- "seen before" --> X
-    M -- "new" --> F["Tier 1 · Apple on-device model<br/>guided generation into a typed Command<br/>~1 s · no app memory"]
-    F -- "one tool" --> X["Execute a typed tool"]
-    F -- "complex" --> L["Tier 2 · LM Studio (Qwen 3.5, MLX)<br/>tool loop ≤ 8 steps · loads only when the Mac<br/>can spare it · unloads after 5 min"]
-    L --> X
-    X --> C{"Change anything?"}
-    C -- "yes" --> A["Confirmation card<br/>Allow · Always allow in this folder · Cancel"]
-    C -- "no" --> R
-    A --> R["Result in the palette<br/>Copy · Paste back · footer says who answered"]
-    X -.-> S["mac-tools (TypeScript MCP server)<br/>43 typed tools · argv only · allowlisted binaries<br/>path policy · audit log · starts on demand"]
-    R --> LRN["Learning loop<br/>intent cache · aliases · frecency<br/>rules · For you · recent requests"]
-```
-
-Tier 0 is a capped local cache. Tier 1 is Apple's on-device model: single steps, chat, and all writing and explaining. Tier 2 is LM Studio, used only for multi-step planning, image understanding and very long text. It loads only when memory, thermal state and battery allow, and unloads after five minutes. Everything works without LM Studio and without Laya; those two only add power.
-
-```mermaid
 flowchart LR
-    U["You"] -- "ask" --> Q["request"]
-    Q --> H["history + intent cache<br/>(capped, 14-day half-life)"]
-    H --> FY["For you rows<br/>old screenshots · Downloads size<br/>duplicates · crashes · clipboard triage<br/>computed on open, at most daily"]
-    H --> RU["Rules<br/>a cleanup run three times is offered weekly<br/>run on wake with a notification · undo"]
-    H --> RC["Recent requests<br/>↑ ↓ ⇥ ↩"]
-    FY --> U
-    RU --> U
-    RC --> U
+    A["Ask<br/>type · speak · drop a file"] --> B["Parse<br/>0 ms, no model"]
+    B --> C["Memory<br/>seen before? ms"]
+    C --> D["Apple on-device model<br/>~1 s"]
+    D -. "multi-step, images,<br/>very long text" .-> E["Local LLM<br/>LM Studio, on demand"]
+    D --> F["Typed tool + card<br/>never a shell"]
+    E --> F
+    F --> G["Answer<br/>and Muon learns"]
 ```
+
+Most requests stop at the first three boxes. The big model loads only when needed and unloads after five minutes. Every change goes through a confirmation card.
 
 ## Private by design
 
