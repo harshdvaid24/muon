@@ -1,0 +1,24 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you ask Muon, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: diagnose
+    attributes:
+      label: Output of `Muon --diagnose`
+      description: Run `/Applications/Muon.app/Contents/MacOS/Muon --diagnose` and paste the result.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, steps to reproduce, the audit log line (~/Library/Application Support/Muon/audit.jsonl).
