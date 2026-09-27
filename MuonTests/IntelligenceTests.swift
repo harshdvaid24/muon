@@ -77,6 +77,15 @@ import Testing
     @Test func markdownStripped() {
         #expect(TextTools.clean("### Fix\n**Run** pod install\n- one\n- two") == "Fix\nRun pod install\n• one\n• two")
     }
+    @Test func longParagraphsAreSplitIntoChunks() {
+        let table = (0..<400).map { "16 Jun 19  UPI/DR/\($0)  ATM WDL  1,500.00" }.joined(separator: "\n")   // one paragraph, ~16k chars
+        let cs = TextTools.chunks(of: table)
+        #expect(cs.count >= 3)
+        #expect(cs.allSatisfy { $0.count <= TextTools.chunkLimit })
+        #expect(cs.joined(separator: "\n") == table)
+        #expect(TextTools.chunks(of: "short") == ["short"])
+    }
+
     @Test func codeFencesStripped() {
         #expect(TextTools.clean("Use `map` here:\n```javascript\nconst a = 1\n```\ndone") == "Use map here:\nconst a = 1\ndone")
     }

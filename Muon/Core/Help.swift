@@ -19,6 +19,7 @@ enum Help {
             "summarize this  ·  summarize this in one line", "explain this  (errors, stack traces, code, jargon)",
             "reply saying I'll be there at 5", "extract the action items", "draft an email about the delayed shipment", "summarize: <text>"]),
         ("Documents and web", [
+            "analyse statement.pdf from downloads and give me a brief  (a file name is enough)", "check invoice.pdf in documents: what is the total",
             "summarize ~/Documents/lease.pdf", "what does ~/Documents/lease.pdf say about the deposit", "ask ~/notes.txt: who is the owner",
             "summarize https://example.com/post", "what is typescript  ·  search the web for swift concurrency", "open github.com",
             "Drop a file on this window, press ⌘O, or ⌘V a copied file, then ask"]),

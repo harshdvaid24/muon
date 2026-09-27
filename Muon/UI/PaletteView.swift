@@ -69,6 +69,7 @@ struct PaletteView: View {
             if model.isBusy {
                 ProgressView().controlSize(.small)
             } else if model.pending == nil {
+                attachButton
                 micButton
                 KeyHint(model.query.isEmpty && model.attachment == nil ? "esc" : "↩")
             }
@@ -96,6 +97,18 @@ struct PaletteView: View {
             DispatchQueue.main.async { model.attachment = url.path; model.focusRequest += 1 }
         }
         return true
+    }
+
+    private var attachButton: some View {
+        Button { model.onAttach() } label: {
+            Image(systemName: "paperclip")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(model.attachment == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
+                .frame(width: 24, height: 24)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .help("Attach a file or folder (⌘O), or drop one here")
     }
 
     private var micButton: some View {

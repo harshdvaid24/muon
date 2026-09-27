@@ -126,6 +126,19 @@ final class Agent {
             }
         }
 
+        // A file named without a path ("sampleStatement.pdf from downloads") resolves to the real file; the usual
+        // parsers run on the rewritten request, and "check / analyse / brief" reads the document instead of opening it.
+        if forceTier == nil, let ref = FileRef.rewrite(q) {
+            let q2 = ref.rewritten
+            if let m = MediaIntent.parse(q2) { return finish(await runMedia(m, query: q2, approver: approver, status: status), query: q) }
+            if let w = WritingIntent.parse(q2) { return finish(await runWriting(w, query: q2, status: status), query: q) }
+            if FileRef.wantsAnalysis(q) {
+                let w = WritingIntent(instruction: FileRef.analysisInstruction(q), label: "Analysis", source: .file(ref.path))
+                return finish(await runWriting(w, query: q2, status: status), query: q)
+            }
+            q = q2
+        }
+
         // Screenshots, images, web pages and crash logs.
         if forceTier == nil, let m = MediaIntent.parse(q) {
             return finish(await runMedia(m, query: q, approver: approver, status: status), query: q)

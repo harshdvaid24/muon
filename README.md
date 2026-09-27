@@ -33,7 +33,7 @@ Type it, or press `⌘⇧M` and say it. Drop a file on the palette, press `⌘O`
 |---|---|
 | **Fix your writing.** Copy text in any app, then ask *"make this professional"*, *"fix grammar"*, *"shorten"* or *"reply saying I'll be there at 5"*. The result has **Copy** and **Paste** buttons. Paste puts it straight back into the app you came from. About one second, on-device. | ![professional rewrite](docs/media/professional.png) |
 | **Explain errors and code.** Copy an error, a stack trace, a block of code or some jargon and ask *"explain this"*. Muon says what it means and what to do about it. | ![explain error](docs/media/explain_error.png) |
-| **Ask your documents.** Drop a file on the palette, press `⌘O`, or `⌘V` a copied file, then ask *"who pays the deposit and how much"*. Typed paths work too: *"what does ~/Documents/lease.pdf say about the deposit"*. PDF, .docx, .txt, .md, .csv, .json and images. Scanned PDFs are read with on-device OCR. | ![lease answer](docs/media/lease.png) |
+| **Ask your documents.** Drop a file on the palette, press `⌘O` or the paperclip, or `⌘V` a copied file, then ask *"who pays the deposit and how much"*. Or just name it: *"analyse statement.pdf from downloads and give me a brief"*. Typed paths work too: *"what does ~/Documents/lease.pdf say about the deposit"*. PDF, .docx, .txt, .md, .csv, .json and images. Scanned PDFs are read with on-device OCR. | ![lease answer](docs/media/lease.png) |
 | **Read screenshots.** `⌘V` a copied screenshot (or any image) and ask *"explain this"*: on-device OCR plus an explanation. Also *"explain the error in this screenshot"* for your newest one, *"read the latest screenshot"*, and *"rename my screenshots"* by what they show. | ![screenshot error](docs/media/screenshot_error.png) |
 | **Meeting notes from a recording.** *"meeting notes from ~/Downloads/standup.mp4"* transcribes on-device and returns a summary, the decisions and the action items. Audio and video files. | ![meeting notes](docs/media/meeting.png) |
 | **Receipts into expenses.** *"total the receipts in ~/Documents/Receipts"* reads each receipt photo, lists merchant, date and total, adds them up, and saves a CSV after one confirmation. | ![receipts](docs/media/receipts.png) |
@@ -82,6 +82,7 @@ On-device, about one second. Long text goes to the local LM Studio model automat
 ### Documents and web
 | Ask | What happens |
 |---|---|
+| `analyse statement.pdf from downloads and give me a brief` | A file name is enough: Muon finds it in the folder you name (or Downloads, Documents, Desktop), reads it, and answers. Also `check invoice.pdf in documents: what is the total` |
 | `summarize ~/Documents/lease.pdf` | Summary of a PDF, .docx, .txt, .md, .csv, .json or image |
 | `what does ~/Documents/lease.pdf say about the deposit` | Answers from the document |
 | `ask ~/notes.txt: who is the owner` | Same, inline form |

@@ -27,7 +27,15 @@ enum TextTools {
                 }
             }
         }
-        if await LMStudioTier.isReachable() {
+        // Medium text (a few pages) is faster in on-device parts than waiting for LM Studio to load a model;
+        // when the local model is already loaded, it gets the whole text for a better answer.
+        let lmUp = await LMStudioTier.isReachable()
+        let lmLoaded = lmUp ? !(await LMStudioTier.loadedModels()).isEmpty : false
+        if FoundationTier.isAvailable, text.count <= 4 * onDeviceInputLimit, !lmLoaded {
+            status("Working in parts, on-device…")
+            return try await chunked(instruction: instruction, input: text)
+        }
+        if lmUp {
             status("Writing with the local model…")
             return try await LMStudioTier.complete(system: system, user: "\(instruction)\n\n<<<\n\(text)\n>>>", status: status)
         }
@@ -42,19 +50,39 @@ enum TextTools {
         return clean(r.content)
     }
 
-    /// Map over paragraph-aligned chunks, then (for summaries) reduce.
-    private static func chunked(instruction: String, input: String) async throws -> String {
-        var chunks: [String] = []; var cur = ""
+    static let chunkLimit = 6_000
+
+    /// Paragraph-aligned chunks; paragraphs longer than a chunk are split by line, then by length (PDF tables).
+    static func chunks(of input: String, limit: Int = chunkLimit) -> [String] {
+        var units: [String] = []
         for para in input.components(separatedBy: "\n\n") {
-            if cur.count + para.count > 6_000, !cur.isEmpty { chunks.append(cur); cur = "" }
-            cur += (cur.isEmpty ? "" : "\n\n") + para
+            if para.count <= limit { units.append(para); continue }
+            for line in para.split(separator: "\n", omittingEmptySubsequences: true).map(String.init) {
+                if line.count <= limit { units.append(line); continue }
+                var rest = Substring(line)
+                while !rest.isEmpty { units.append(String(rest.prefix(limit))); rest = rest.dropFirst(limit) }
+            }
         }
-        if !cur.isEmpty { chunks.append(cur) }
+        var out: [String] = []; var cur = ""
+        for u in units {
+            if cur.count + u.count + 1 > limit, !cur.isEmpty { out.append(cur); cur = "" }
+            cur += (cur.isEmpty ? "" : "\n") + u
+        }
+        if !cur.isEmpty { out.append(cur) }
+        return out
+    }
+
+    /// Map over chunks, then merge summaries and analyses into one answer.
+    private static func chunked(instruction: String, input: String) async throws -> String {
         var parts: [String] = []
-        for c in chunks { parts.append(try await onDevice(instruction: instruction, input: c)) }
+        for c in chunks(of: input) { parts.append(try await onDevice(instruction: instruction, input: c)) }
+        if parts.count == 1 { return parts[0] }
         let joined = parts.joined(separator: "\n\n")
-        let isSummary = instruction.lowercased().contains("summar")
-        return isSummary && joined.count > onDeviceInputLimit / 2 ? try await onDevice(instruction: "Merge these partial summaries into one coherent summary. Keep every distinct point.", input: joined) : joined
+        let lower = instruction.lowercased()
+        let merge = lower.contains("summar") || lower.contains("analy") || lower.contains("brief") || lower.contains("answer")
+        guard merge else { return joined }
+        let merged = joined.count > onDeviceInputLimit ? try await chunked(instruction: "Merge these partial results for one document into one answer in the same format. Keep every distinct point, drop duplicates.", input: joined) : joined
+        return try await onDevice(instruction: "These are partial results for parts of one document. Merge them into a single answer in the same format: keep every distinct fact, drop duplicates, keep it as brief as the parts. Original request: \(instruction)", input: merged)
     }
 
     static func clean(_ s: String) -> String {

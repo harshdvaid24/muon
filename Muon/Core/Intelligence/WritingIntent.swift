@@ -10,6 +10,8 @@ struct WritingIntent: Equatable {
 
     static let explainInstruction = "Explain this in plain language for a smart non-expert. If it is an error or stack trace, say what went wrong, the most likely cause, and the fix, in that order. Be brief."
 
+    static let analysisInstruction = "Analyse this document. Start with a 2-4 sentence brief of what it is and what it says. Then list the key facts, figures, dates, amounts and parties as short bullets starting with '- '. End with anything unusual or worth attention, or 'Nothing unusual.'"
+
     static func summaryInstruction(_ length: String) -> String {
         switch length.lowercased() {
         case "one line", "one-line", "1 line", "tldr", "tl;dr": return "Summarize in one sentence."
@@ -23,6 +25,8 @@ struct WritingIntent: Equatable {
     private static let rules: [(pattern: String, make: ([String]) -> (String, String))] = [
         (#"^(fix|correct|proofread)( the| my)?( grammar| spelling| typos| this| it| text)*$"#, { _ in ("Fix grammar, spelling and punctuation. Change nothing else.", "Fixed") }),
         (#"^(tl;?dr|summari[sz]e)( this| it| the clipboard| text)?( (in one line|in one sentence|as bullets|in bullets|as bullet points|briefly|in detail))?$"#, { g in (summaryInstruction(g[3].lowercased().trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "in ", with: "").replacingOccurrences(of: "as ", with: "")), "Summary") }),
+        (#"^(give me |)(a |the |quick |short )*(brief|overview|gist|rundown|summary)( of (this|it|the (file|document|pdf|text)))?$"#, { _ in (summaryInstruction("short"), "Brief") }),
+        (#"^(analy[sz]e|review|assess|go through|look at)( this| it)?( (file|document|pdf|statement|report|contract|text))?( and (give me|write) (a |the )?(brief|summary|overview))?$"#, { _ in (analysisInstruction, "Analysis") }),
         (#"^(make|rewrite)( this| it| the text)?( sound| to be| in a| as| more)? ?(professional|formal|casual|friendly|polite|confident|concise|clear|simple|warm|neutral|direct|persuasive)( tone)?$"#, { g in ("Rewrite in a \(g[3].lowercased()) tone. Keep the meaning.", "\(g[3].capitalized) version") }),
         (#"^(shorten|condense|make (this|it) shorter|make (this|it) (more )?concise)$"#, { _ in ("Shorten to about half the length. Keep every key point.", "Shorter") }),
         (#"^(expand|elaborate|make (this|it) longer)( on this| this)?$"#, { _ in ("Expand with more detail and smoother flow, keeping the same facts.", "Expanded") }),
