@@ -56,6 +56,7 @@ enum CLI {
             print("tier=\(out.tier) ms=\(Int(Date().timeIntervalSince(started) * 1000))")
             for r in out.results { print("tool=\(r.tool) ok=\(r.ok)\(r.cancelled ? " cancelled" : "") args=\(Agent.json(r.args))") }
             for s in out.suggestions { print("suggest: \(s.title) — \(s.subtitle ?? "") [\(s.tool) \(Agent.json(s.args))]") }
+            if let r = out.result { print("result (\(r.label) · \(r.source)):\n\(r.text)") }
             if let a = out.answer { print("answer:\n\(a)") }
             if let n = out.note { print("note: \(n)") }
             MCPClient.shared.stop()

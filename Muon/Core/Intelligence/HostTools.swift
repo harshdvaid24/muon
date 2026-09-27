@@ -24,7 +24,7 @@ struct HostTool {
 
 enum HostTools {
     static var all: [HostTool] {
-        TextTools.tools + Documents.tools + VisionTools.tools + CrashLogs.tools + Localization.tools + Transcriber.tools + Receipts.tools
+        TextTools.tools + Documents.tools + VisionTools.tools + CrashLogs.tools + Transcriber.tools + Receipts.tools
     }
 
     static func tool(named name: String) -> HostTool? { all.first { $0.name == name } }

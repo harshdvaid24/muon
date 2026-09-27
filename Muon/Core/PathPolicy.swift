@@ -46,12 +46,35 @@ enum PathPolicy {
         return real
     }
 
-    /// Every `~/…` or `/…` token in free text, in order.
+    /// Every `~/…` or `/…` path in free text, in order. Quoted paths may contain spaces; unquoted ones may too,
+    /// when the longer candidate (path plus the following words) actually exists on disk — macOS screenshot
+    /// names like "Screenshot 2026-09-27 at 09.41.12.png" are the common case.
     static func paths(in text: String) -> [String] {
-        guard let re = try? NSRegularExpression(pattern: #"(?<![\w:/])(~/|/)[^\s,;'":]+"#) else { return [] }
-        return re.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap { m in
-            Range(m.range, in: text).map { String(text[$0]).trimmingCharacters(in: CharacterSet(charactersIn: ".?!:")) }
+        var out: [String] = []
+        var rest = text
+        if let qre = try? NSRegularExpression(pattern: #""((?:~/|/)[^"]+)""#) {
+            for m in qre.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+                if let r = Range(m.range(at: 1), in: text) { out.insert(String(text[r]), at: 0) }
+                if let whole = Range(m.range, in: text) { rest.replaceSubrange(whole, with: " ") }
+            }
         }
+        guard let re = try? NSRegularExpression(pattern: #"(?<![\w:/])(~/|/)[^\s,;'":]+"#) else { return out }
+        let ns = rest as NSString
+        for m in re.matches(in: rest, range: NSRange(location: 0, length: ns.length)) {
+            let token = ns.substring(with: m.range).trimmingCharacters(in: CharacterSet(charactersIn: ".?!:"))
+            // extend across spaces while the longer candidate exists
+            var best = token
+            let tail = ns.substring(from: m.range.location + m.range.length)
+            let words = tail.split(separator: " ", omittingEmptySubsequences: false)
+            var candidate = token
+            for w in words.dropFirst().prefix(8) {
+                candidate += " " + w
+                let cleaned = candidate.trimmingCharacters(in: CharacterSet(charactersIn: ".?!:,;"))
+                if FileManager.default.fileExists(atPath: Settings.expand(cleaned)) { best = cleaned }
+            }
+            out.append(best)
+        }
+        return out
     }
 
     /// First `~/…` or `/…` token in free text, if any.

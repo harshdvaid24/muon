@@ -32,6 +32,8 @@ struct WritingIntent: Equatable {
         (#"^(explain|what does this mean|what is this|explain this (error|code|message))( this| it| this error| this code)?$"#, { _ in (explainInstruction, "Explanation") }),
         (#"^(reply|respond|answer)( to (this|it))?( (saying|that|with|:) ?(.+))?$"#, { g in ("Draft a reply to this message" + (g[5].isEmpty ? "." : ", following this guidance: \(g[5])."), "Reply") }),
         (#"^(extract|list|pull out)( the| all)? (dates|amounts|numbers|emails|email addresses|names|action items|todos|tasks|links|urls|phone numbers|key points)( from (this|it|the text))?$"#, { g in ("Extract all the \(g[2].lowercased()) from the text as a plain list, one per line. If none, say 'None found'.", "\(g[2].capitalized)") }),
+        (#"^(what does( it| this| that| the (file|document|pdf|page|text))? say about|what does( it| this| the (file|document|pdf))? say regarding|does (it|this) mention|find in (it|this)|look for)\s+(.+)$"#, { g in ("Using only the text, answer: what does it say about \(g.last ?? "")? Quote the relevant part briefly and be specific. If it says nothing about that, say so.", "About \(g.last ?? "")") }),
+        (#"^(ask|question)[:]?\s+(.+)$"#, { g in ("Using only the text, answer this question briefly and specifically: \(g[1])", "Answer") }),
         (#"^(draft|write)( an?| the)? (email|message|note|tweet|post)( about| saying| that)? (.+)$"#, { g in ("Write a \(g[2]) about: \(g[4]). Be natural and concise.", "\(g[2].capitalized) draft") }),
     ]
 
@@ -49,6 +51,10 @@ struct WritingIntent: Equatable {
         var file: String?
         if let r = q.range(of: #"(~/|/)[^\s]+"#, options: .regularExpression) {
             file = String(q[r]); q = q.replacingCharacters(in: r, with: "").trimmingCharacters(in: .whitespaces)
+        }
+        // "ask ~/x.txt: who is the owner" → the file is the source and the text after the colon is the question.
+        if let f = file, let inl = inline, q.range(of: #"^(ask|question)$"#, options: [.regularExpression, .caseInsensitive]) != nil {
+            q += " " + inl; inline = nil; file = f
         }
         // Match case-insensitively on the original text so guidance like "I'll be there at 5" keeps its case.
         let base = q.replacingOccurrences(of: "  ", with: " ").trimmingCharacters(in: CharacterSet(charactersIn: " .!?"))

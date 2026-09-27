@@ -65,3 +65,16 @@ import Testing
         #expect(out.lowercased().contains("buen"))
     }
 }
+
+@Suite struct DocumentQATests {
+    @Test func questionAboutAFile() {
+        let w = WritingIntent.parse("what does ~/Documents/lease.pdf say about the deposit")
+        #expect(w?.source == .file("~/Documents/lease.pdf"))
+        #expect(w?.instruction.contains("the deposit") == true)
+        #expect(w?.label == "About the deposit")
+        #expect(WritingIntent.parse("ask ~/notes.txt: who is the owner")?.source == .file("~/notes.txt"))
+    }
+    @Test func markdownStripped() {
+        #expect(TextTools.clean("### Fix\n**Run** pod install\n- one\n- two") == "Fix\nRun pod install\n• one\n• two")
+    }
+}

@@ -73,6 +73,7 @@ enum Permission {
         case "quitApplication": return "xmark.app.fill"
         case "killProcess": return "bolt.slash.fill"
         case "runMenuCommand": return "filemenu.and.cursorarrow"
+        case "writeTextFile": return "doc.badge.plus"
         case "runOnDevice": return "iphone"
         case "triggerWorkflow": return "paperplane.fill"
         default: return "checkmark.shield.fill"
@@ -90,6 +91,11 @@ enum Permission {
         case "createFolder": return ("Create folder", short(args["path"] as? String ?? "?"))
         case "quitApplication": return ("Quit \(args["name"] as? String ?? "app")", "It may ask you to save unsaved work.")
         case "killProcess": return ("Force-terminate process \(args["pid"] ?? "?")", "Unsaved work in that process will be lost.")
+        case "writeTextFile":
+            let p = args["path"] as? String ?? "?"
+            let content = args["content"] as? String ?? ""
+            let lines = content.split(separator: "\n", omittingEmptySubsequences: false).count
+            return ("Save \((p as NSString).lastPathComponent)", "\(lines) line\(lines == 1 ? "" : "s") · \(short((p as NSString).deletingLastPathComponent))\((args["overwrite"] as? Bool) == true && FileManager.default.fileExists(atPath: Settings.expand(p)) ? "\nReplaces the existing file." : "")")
         case "runOnDevice":
             let project = ((args["project"] as? String).map { ($0 as NSString).lastPathComponent }) ?? "project"
             return ("Run \(project) on \(args["device"] as? String ?? "device")", "Builds with React Native and launches it on the \(args["platform"] as? String == "android" ? "Android emulator" : "iOS Simulator"). Runs in the background; you get a notification when it finishes.")

@@ -17,7 +17,6 @@ enum LMStudioTier {
     }
 
     static let systemPrompt = """
-    /no_think
     You are Muon, a local assistant that operates this Mac through tools. Be brief and concrete.
     Rules: use tools to look before acting; never guess paths; prefer batch tools (moveItems, trashItems) so the user confirms once;
     deleting always means trashItems; if a tool returns an error, explain it and stop. Paths outside the user's allowed folders are refused.
@@ -100,7 +99,7 @@ enum LMStudioTier {
         let body: [String: Any] = [
             "model": model, "messages": [["role": "system", "content": system], ["role": "user", "content": user]],
             "temperature": 0.3, "max_tokens": 2500, "stream": false, "ttl": Settings.modelTTL,
-            "chat_template_kwargs": ["enable_thinking": false],
+            "reasoning_effort": "none",   // LM Studio: Qwen3.5 ignores enable_thinking; this is what turns reasoning off
         ]
         let resp = try await post("/v1/chat/completions", body)
         guard let msg = (resp["choices"] as? [[String: Any]])?.first?["message"] as? [String: Any], let text = msg["content"] as? String else { throw LMError.badResponse }
@@ -162,7 +161,7 @@ enum LMStudioTier {
             let body: [String: Any] = [
                 "model": model, "messages": messages, "tools": toolDefs, "tool_choice": "auto",
                 "temperature": 0.2, "max_tokens": 1500, "stream": false, "ttl": Settings.modelTTL,
-                "chat_template_kwargs": ["enable_thinking": false],
+                "reasoning_effort": "none",   // LM Studio: Qwen3.5 ignores enable_thinking; this is what turns reasoning off
             ]
             let resp = try await post("/v1/chat/completions", body)
             guard let choice = (resp["choices"] as? [[String: Any]])?.first, let msg = choice["message"] as? [String: Any] else { throw LMError.badResponse }

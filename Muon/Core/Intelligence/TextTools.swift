@@ -62,6 +62,10 @@ enum TextTools {
         if t.hasPrefix("<<<") { t = String(t.dropFirst(3)) }
         if t.hasSuffix(">>>") { t = String(t.dropLast(3)) }
         if t.count > 2, t.first == "\"", t.last == "\"" { t = String(t.dropFirst().dropLast()) }
+        // Small models sprinkle Markdown; the palette shows plain text.
+        t = t.replacingOccurrences(of: #"(?m)^#{1,6}\s*"#, with: "", options: .regularExpression)
+        t = t.replacingOccurrences(of: #"\*\*(.+?)\*\*"#, with: "$1", options: .regularExpression)
+        t = t.replacingOccurrences(of: #"(?m)^\s*[-*]\s+"#, with: "• ", options: .regularExpression)
         return t.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 

@@ -119,11 +119,6 @@ final class Agent {
             }
         }
 
-        // Localization files: "translate ~/app/en.json to hindi and gujarati".
-        if forceTier == nil, let l = Localization.parseIntent(q) {
-            return finish(await runLocalize(l, approver: approver, status: status), query: q)
-        }
-
         // Screenshots, images, web pages and crash logs.
         if forceTier == nil, let m = MediaIntent.parse(q) {
             return finish(await runMedia(m, query: q, approver: approver, status: status), query: q)
@@ -383,40 +378,6 @@ final class Agent {
         }
         Undo.clear()
         out.answer = "Restored \(done) of \(plan.count)."
-        return out
-    }
-
-    // MARK: Localization
-
-    func runLocalize(_ l: Localization.Intent, approver: Approver, status: @escaping (String) -> Void) async -> AgentOutput {
-        var out = AgentOutput()
-        out.tier = 1
-        do {
-            let real = try PathPolicy.resolve(l.path)
-            guard let fmt = Localization.format(for: real) else { out.answer = "Supported localization files: .json, .strings, .arb"; return out }
-            let text = try Documents.text(at: real)
-            let ents = try Localization.entries(text, format: fmt)
-            guard !ents.isEmpty else { out.answer = "No translatable strings found in \(Self.short(real))."; return out }
-            var files: [(path: String, content: String)] = []
-            for lang in l.languages {
-                status("Translating \(ents.count) strings to \(lang.capitalized)…")
-                let tr = try await Localization.translate(ents, to: lang.capitalized) { try await TextTools.generate(instruction: "", input: $0) }
-                let code = Localization.languageCodes[lang] ?? String(lang.prefix(2))
-                files.append((Localization.outputPath(source: real, code: code), try Localization.render(text, format: fmt, translations: tr)))
-            }
-            let pending = PendingAction(icon: "globe", tool: "writeTextFile", args: ["paths": files.map(\.path)],
-                                        title: "Write \(files.count) translated file\(files.count == 1 ? "" : "s") (\(ents.count) strings each)",
-                                        detail: files.map { Self.short($0.path) }.joined(separator: "\n"), destructive: false, alwaysKey: nil, alwaysLabel: nil)
-            if case .cancel = await approver.approve(pending) { out.cancelled = true; out.answer = "Cancelled."; return out }
-            var written: [String] = []
-            for f in files {
-                let (msg, isError) = try await MCPClient.shared.call("writeTextFile", args: ["path": f.path, "content": f.content, "overwrite": true])
-                out.results.append(ActionResult(tool: "writeTextFile", args: ["path": f.path], text: msg, ok: !isError))
-                if !isError { written.append(Self.short(f.path)) }
-            }
-            out.answer = "Translated \(ents.count) strings into \(l.languages.map(\.capitalized).joined(separator: ", ")).\n" + written.joined(separator: "\n")
-            memory?.bump(kind: "writing", name: "Localize")
-        } catch { out.answer = error.localizedDescription }
         return out
     }
 
