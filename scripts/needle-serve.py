@@ -40,7 +40,8 @@ def get_agent(tools):
     key = hashlib.sha1(json.dumps(tools, sort_keys=True).encode()).hexdigest()
     if agent is None or key != agent_key:
         schemas = [{"name": t["name"], "description": (t.get("description") or "")[:300], "parameters": t.get("inputSchema") or t.get("parameters") or {"type": "object", "properties": {}}} for t in tools]
-        agent = needle.Needle(tools=schemas, system=f"macOS assistant. Home folder is {os.path.expanduser('~')}.")
+        weights = os.environ.get("NEEDLE_WEIGHTS")   # a tuned .cact from `needle build`; default: the base Needle 3
+        agent = needle.Needle(tools=schemas, system=f"macOS assistant. Home folder is {os.path.expanduser('~')}.", **({"weights": weights} if weights else {}))
         agent_key = key
     return agent
 
@@ -64,5 +65,5 @@ class H(BaseHTTPRequestHandler):
             self._send(500, {"error": str(e)[:300]})
 
 if __name__ == "__main__":
-    print(f"needle-serve on http://127.0.0.1:{PORT}  (engine {os.environ.get('NEEDLE3_LIB_PATH')})", flush=True)
+    print(f"needle-serve on http://127.0.0.1:{PORT}  (engine {os.environ.get('NEEDLE3_LIB_PATH')}, weights {os.environ.get('NEEDLE_WEIGHTS') or 'base Needle 3'})", flush=True)
     HTTPServer(("127.0.0.1", PORT), H).serve_forever()
