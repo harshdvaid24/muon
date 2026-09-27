@@ -16,6 +16,25 @@ enum CLI {
     /// Returns true when the process should run headless; the caller still starts the run loop.
     static func runIfRequested() -> Bool {
         let args = CommandLine.arguments
+        if args.contains("--diagnose") {
+            active = true
+            Task {
+                let lm = await LMStudioTier.isReachable()
+                let rows: [(String, String)] = [
+                    ("Muon", Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"),
+                    ("macOS", ProcessInfo.processInfo.operatingSystemVersionString),
+                    ("Apple Intelligence", FoundationTier.isAvailable ? "available" : (FoundationTier.unavailableReason ?? "unavailable")),
+                    ("Node", FileManager.default.isExecutableFile(atPath: Settings.nodePath) ? Settings.nodePath : "MISSING — brew install node"),
+                    ("Tool server", FileManager.default.fileExists(atPath: Settings.mcpServerPath) ? Settings.mcpServerPath : "MISSING"),
+                    ("LM Studio", lm ? "reachable at \(Settings.lmBaseURL)" : "not running (optional)"),
+                    ("Shortcut", HotKey.currentCombo.label),
+                    ("Allowed folders", Settings.allowedRoots.joined(separator: " ")),
+                ]
+                for (k, v) in rows { print(k.padding(toLength: 20, withPad: " ", startingAt: 0) + v) }
+                exit(0)
+            }
+            return true
+        }
         guard let i = args.firstIndex(of: "--query"), i + 1 < args.count else { return false }
         active = true
         let query = args[i + 1]

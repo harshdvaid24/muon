@@ -72,6 +72,12 @@ final class MCPClient {
     // MARK: Private
 
     private func start() async throws {
+        guard FileManager.default.isExecutableFile(atPath: Settings.nodePath) else {
+            throw MCPError.rpc("Node.js 20 or newer is required for Muon's tools. Install it with: brew install node — then try again.")
+        }
+        guard FileManager.default.fileExists(atPath: Settings.mcpServerPath) else {
+            throw MCPError.rpc("Muon's tool server is missing at \(Settings.mcpServerPath). Reinstall Muon or set the path in Settings › Tool server.")
+        }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: Settings.nodePath)
         p.arguments = [Settings.mcpServerPath]

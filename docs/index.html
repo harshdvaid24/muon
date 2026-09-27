@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muon — a local AI agent for your Mac</title>
+<meta name="description" content="Muon is a free, open-source AI agent for macOS. Press a key to find files, free disk space, find duplicates, sweep TODOs, clean up safely, build apps on simulators and get quick answers — on-device, with zero idle load.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Muon — a local AI agent for your Mac">
+<meta property="og:description" content="Press a key. Find, clean up, open, build and answer — on-device, zero idle load, open source.">
+<meta property="og:url" content="https://harshdvaid24.github.io/muon/">
+<meta property="og:image" content="https://harshdvaid24.github.io/muon/media/social.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Muon — a local AI agent for your Mac">
+<meta name="twitter:description" content="Press a key. Find, clean up, open, build and answer — on-device, zero idle load, open source.">
+<meta name="twitter:image" content="https://harshdvaid24.github.io/muon/media/social.png">
+<link rel="icon" href="media/icon.png">
+<style>
+:root{
+  --bg:#0d0f16; --bg2:#141824; --card:rgba(255,255,255,.055); --card-b:rgba(255,255,255,.10);
+  --text:#f3f4f8; --muted:#a9afbe; --faint:#7d8496; --accent:#7c9cff; --accent-2:#5b7cff; --ok:#46d39a;
+  --code:#0a0c12; --shadow:0 20px 60px rgba(0,0,0,.45);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f6f7fb; --bg2:#ffffff; --card:rgba(255,255,255,.75); --card-b:rgba(15,20,40,.10);
+    --text:#12151f; --muted:#4b5263; --faint:#6b7282; --accent:#3a5bff; --accent-2:#2746e6; --ok:#118a5a;
+    --code:#eef0f6; --shadow:0 20px 50px rgba(20,30,60,.12);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d0f16; --bg2:#141824; --card:rgba(255,255,255,.055); --card-b:rgba(255,255,255,.10);
+  --text:#f3f4f8; --muted:#a9afbe; --faint:#7d8496; --accent:#7c9cff; --accent-2:#5b7cff; --ok:#46d39a;
+  --code:#0a0c12; --shadow:0 20px 60px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:-20% -10% auto;height:70vh;background:radial-gradient(40% 50% at 70% 20%,rgba(92,124,255,.28),transparent 70%),radial-gradient(30% 40% at 15% 60%,rgba(255,140,90,.14),transparent 70%);pointer-events:none;z-index:-1}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+nav{position:sticky;top:0;z-index:10;backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);background:color-mix(in srgb,var(--bg) 72%,transparent);border-bottom:1px solid var(--card-b)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--text)}
+.brand img{width:28px;height:28px;border-radius:7px}
+nav .links{margin-left:auto;display:flex;gap:18px;align-items:center;font-size:14px}
+nav .links a{color:var(--muted)}nav .links a:hover{color:var(--text);text-decoration:none}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:999px;font-weight:600;font-size:15px;border:1px solid transparent;cursor:pointer;transition:transform .15s ease,background .15s ease}
+.btn:hover{text-decoration:none;transform:translateY(-1px)}
+.btn-primary{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:#fff;box-shadow:0 8px 24px rgba(70,100,255,.35)}
+.btn-ghost{background:var(--card);border-color:var(--card-b);color:var(--text)}
+.btn-sm{padding:8px 14px;font-size:13px}
+header.hero{padding:88px 0 40px;text-align:center}
+.hero img.icon{width:96px;height:96px;border-radius:22px;box-shadow:var(--shadow)}
+.hero h1{font:800 clamp(40px,7vw,72px)/1.04 -apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;letter-spacing:-.03em;margin:28px 0 16px}
+.hero h1 span{background:linear-gradient(90deg,var(--accent),#b39bff 60%,#ff9d7a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.lead{font-size:clamp(17px,2.2vw,21px);color:var(--muted);max-width:720px;margin:0 auto 30px}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.meta{margin-top:18px;font-size:13px;color:var(--faint)}
+.demo{margin:48px auto 0;max-width:820px;padding:10px;border-radius:26px;background:var(--card);border:1px solid var(--card-b);box-shadow:var(--shadow)}
+.demo img{display:block;width:100%;border-radius:18px}
+.demo-cap{text-align:center;font-size:13px;color:var(--faint);margin-top:12px}
+section{padding:72px 0}
+.kicker{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h2{font:800 clamp(28px,4vw,40px)/1.15 -apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;letter-spacing:-.02em;margin:8px 0 14px}
+.sub{color:var(--muted);max-width:680px;margin:0 0 36px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+.card{background:var(--card);border:1px solid var(--card-b);border-radius:20px;overflow:hidden;display:flex;flex-direction:column}
+.card img{width:100%;aspect-ratio:800/520;object-fit:cover;object-position:bottom;display:block;border-bottom:1px solid var(--card-b)}
+.card .body{padding:16px 18px 18px}
+.card h3{margin:0 0 6px;font-size:17px}
+.card p{margin:0;color:var(--muted);font-size:14px}
+.prompt{display:inline-block;margin-top:10px;font:13px/1.4 ui-monospace,"SF Mono",Menlo,monospace;background:var(--code);border:1px solid var(--card-b);padding:6px 10px;border-radius:10px;color:var(--text)}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.tier{background:var(--card);border:1px solid var(--card-b);border-radius:20px;padding:22px}
+.tier .t{font:800 30px/1 -apple-system,BlinkMacSystemFont,sans-serif;letter-spacing:-.02em}
+.tier .l{font-size:13px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.tier p{color:var(--muted);margin:10px 0 0;font-size:14px}
+.safe{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.safe div{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--card-b);border-radius:16px;padding:16px}
+.safe svg{flex:none;margin-top:2px}
+.safe b{display:block;margin-bottom:2px}
+.safe span{color:var(--muted);font-size:14px}
+.install{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.box{background:var(--card);border:1px solid var(--card-b);border-radius:20px;padding:22px}
+.box h3{margin:0 0 4px}.box p{color:var(--muted);font-size:14px;margin:0 0 14px}
+pre{position:relative;margin:0;background:var(--code);border:1px solid var(--card-b);border-radius:12px;padding:14px 16px;overflow-x:auto;font:13px/1.55 ui-monospace,"SF Mono",Menlo,monospace}
+.copy{position:absolute;top:8px;right:8px;background:var(--card);border:1px solid var(--card-b);color:var(--muted);border-radius:8px;font-size:12px;padding:3px 8px;cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{font:13px/1 ui-monospace,"SF Mono",Menlo,monospace;background:var(--card);border:1px solid var(--card-b);padding:10px 12px;border-radius:999px;color:var(--text)}
+ol.steps{margin:0;padding-left:20px;color:var(--muted);font-size:14px}ol.steps li{margin:4px 0}
+footer{border-top:1px solid var(--card-b);padding:36px 0 56px;color:var(--faint);font-size:14px}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}
+@media (max-width:640px){nav .links a.hide-sm{display:none}header.hero{padding-top:56px}section{padding:52px 0}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#"><img src="media/icon.png" alt="">Muon</a>
+    <div class="links">
+      <a class="hide-sm" href="#features">Features</a>
+      <a class="hide-sm" href="#privacy">Privacy</a>
+      <a class="hide-sm" href="#install">Install</a>
+      <a href="https://github.com/harshdvaid24/muon">GitHub</a>
+      <a class="btn btn-primary btn-sm" href="https://github.com/harshdvaid24/muon/releases/latest">Download</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <img class="icon" src="media/icon.png" alt="Muon app icon">
+    <h1>Your Mac, <span>one keystroke away.</span></h1>
+    <p class="lead">Muon is a local AI agent that finds, cleans up, opens, builds and answers — on-device, with zero idle footprint. Press <b>⇧⌥Space</b> and say what you need.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/harshdvaid24/muon/releases/latest">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 19h16"/></svg>
+        Download for macOS</a>
+      <a class="btn btn-ghost" href="https://github.com/harshdvaid24/muon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17l-6.1 3.4 1.5-6.8L2.2 9l6.9-.7z"/></svg>
+        Star on GitHub</a>
+    </div>
+    <div class="meta">Free &amp; open source (MIT) · macOS 26 · Apple Silicon</div>
+    <div class="demo"><img src="media/demo.gif" alt="Muon demo: disk cleanup, duplicates, TODO sweep, safe file moves, simulator builds, memory hogs, device list and web answers" width="640" height="416"></div>
+    <div class="demo-cap">Real recording · <a href="media/demo.mp4">watch in HD</a></div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="kicker">What it does</div>
+    <h2>Real work, not a chat window.</h2>
+    <p class="sub">Muon acts on your Mac through safe, typed tools. Everything below is a real screenshot.</p>
+    <div class="grid">
+      <div class="card"><img src="media/largest.png" alt="Largest files list" loading="lazy"><div class="body"><h3>Free up disk space</h3><p>Biggest files first, build folders skipped.</p><span class="prompt">what is taking space in ~/Downloads</span></div></div>
+      <div class="card"><img src="media/duplicates.png" alt="Duplicate files" loading="lazy"><div class="body"><h3>Find duplicates</h3><p>Identical files and the space you'd get back.</p><span class="prompt">find duplicate files in ~/Downloads</span></div></div>
+      <div class="card"><img src="media/todos.png" alt="TODO search results" loading="lazy"><div class="body"><h3>Sweep your code</h3><p>Every hit with its line. Press ↩ to open it.</p><span class="prompt">search code for TODO in ~/Projects/app</span></div></div>
+      <div class="card"><img src="media/cleanup_confirm.png" alt="Confirmation card listing exact files" loading="lazy"><div class="body"><h3>Clean up, safely</h3><p>Exact files listed. One confirmation. Trash, never delete.</p><span class="prompt">move the screenshots in ~/Downloads into ~/Downloads/Archive</span></div></div>
+      <div class="card"><img src="media/run_confirm.png" alt="Run on iPhone confirmation" loading="lazy"><div class="body"><h3>Build &amp; run</h3><p>React Native on the iOS Simulator or Android, in the background.</p><span class="prompt">run ~/Projects/app on iPhone 17</span></div></div>
+      <div class="card"><img src="media/memory.png" alt="Apps by memory use" loading="lazy"><div class="body"><h3>Find memory hogs</h3><p>What is eating your RAM right now.</p><span class="prompt">which apps are using the most memory</span></div></div>
+      <div class="card"><img src="media/devices.png" alt="Simulators and devices" loading="lazy"><div class="body"><h3>Know your devices</h3><p>Simulators, emulators and connected phones.</p><span class="prompt">which simulators do I have</span></div></div>
+      <div class="card"><img src="media/web.png" alt="Web answer" loading="lazy"><div class="body"><h3>Quick answers</h3><p>A short answer with its source, without leaving your flow.</p><span class="prompt">what is react native</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">Why it's fast</div>
+    <h2>It only thinks as hard as it has to.</h2>
+    <p class="sub">Most requests never touch a big model. The more you use Muon, the more it answers from memory.</p>
+    <div class="tiers">
+      <div class="tier"><div class="l">Tier 0 · memory</div><div class="t">~0 ms</div><p>Repeated requests replay from a tiny local cache. No model at all.</p></div>
+      <div class="tier"><div class="l">Tier 1 · on-device</div><div class="t">~1 s</div><p>Apple's built-in model routes single steps and chat. No app memory used.</p></div>
+      <div class="tier"><div class="l">Tier 2 · local LLM</div><div class="t">on demand</div><p>LM Studio plans multi-step work, only when your Mac can spare the memory, then unloads.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="privacy">
+  <div class="wrap">
+    <div class="kicker">Private by design</div>
+    <h2>Your files never leave your Mac.</h2>
+    <p class="sub">Muon was built so a model can never do something you didn't approve.</p>
+    <div class="safe">
+      <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 7.7-8 9-4.6-1.3-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><p><b>No shell, ever</b><span>Typed tools only, running allowlisted programs with argument lists.</span></p></div>
+      <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><p><b>Allowed folders only</b><span>~/Library, ~/.ssh, /System and other protected places are always refused.</span></p></div>
+      <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><p><b>You approve every change</b><span>Moves, renames, quits and builds ask first. Releases get a system dialog.</span></p></div>
+      <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg><p><b>Delete means Trash</b><span>Nothing is ever permanently deleted. Put Back always works.</span></p></div>
+      <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><p><b>One door to the internet</b><span>Only the web-search tool goes online, and only when you ask.</span></p></div>
+      <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><p><b>Everything is logged</b><span>An audit log of every action — paths only, never file contents.</span></p></div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <div class="kicker">Install</div>
+    <h2>Up and running in a minute.</h2>
+    <p class="sub">Needs macOS 26 on Apple Silicon with Apple Intelligence on, and Node.js 20+ (<code>brew install node</code>).</p>
+    <div class="install">
+      <div class="box"><h3>Download</h3><p>The easiest way.</p>
+        <ol class="steps">
+          <li><a href="https://github.com/harshdvaid24/muon/releases/latest">Download Muon.zip</a> and move <b>Muon.app</b> to Applications.</li>
+          <li>Open it. If macOS blocks it, go to System Settings › Privacy &amp; Security › <b>Open Anyway</b>.</li>
+          <li>Press <b>⇧⌥Space</b>.</li>
+        </ol></div>
+      <div class="box"><h3>Homebrew</h3><p>For people who live in the terminal.</p>
+        <pre><button class="copy" type="button">Copy</button>brew install --cask harshdvaid24/tap/muon</pre></div>
+      <div class="box"><h3>From source</h3><p>Xcode 26 and Node 20+.</p>
+        <pre><button class="copy" type="button">Copy</button>git clone https://github.com/harshdvaid24/muon.git
+cd muon/mac-tools && npm install && npm run build
+cd .. && scripts/build.sh && scripts/run.sh</pre></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">Ask it anything</div>
+    <h2>Plain language. No syntax to learn.</h2>
+    <p class="sub">A few things people ask. The <a href="https://github.com/harshdvaid24/muon#everything-you-can-ask">full catalog</a> covers apps, files, disk, code, builds, GitHub and more.</p>
+    <div class="chips">
+      <span class="chip">open xcode</span><span class="chip">quit spotify</span><span class="chip">find pdfs about invoices</span>
+      <span class="chip">trash zips in downloads older than 30 days</span><span class="chip">archive the pdfs on my desktop</span>
+      <span class="chip">open my-app in vs code</span><span class="chip">search code for FirebaseApp.configure</span>
+      <span class="chip">run my-app on pixel 9</span><span class="chip">is my build done</span>
+      <span class="chip">trigger the release workflow in my-app</span><span class="chip">in safari open a new private window</span>
+      <span class="chip">how much disk space is free</span><span class="chip">save macro morning</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>Muon · MIT licensed · by <a href="https://github.com/harshdvaid24">Harsh Vaid</a></div>
+    <div><a href="https://github.com/harshdvaid24/muon">Source</a> · <a href="https://github.com/harshdvaid24/muon/issues">Issues</a> · <a href="https://github.com/harshdvaid24/muon/discussions">Discussions</a></div>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.copy').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var text = b.parentElement.textContent.replace(/^Copy/, '').trim();
+    try { navigator.clipboard.writeText(text); b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1500); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

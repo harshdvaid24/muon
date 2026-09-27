@@ -10,10 +10,16 @@
 ![Platform](https://img.shields.io/badge/platform-macOS%2026-lightgrey)
 ![On-device](https://img.shields.io/badge/AI-on--device-8A2BE2)
 ![MCP](https://img.shields.io/badge/tools-MCP-green)
+[![Release](https://img.shields.io/github/v/release/harshdvaid24/muon)](https://github.com/harshdvaid24/muon/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/harshdvaid24/muon/total)](https://github.com/harshdvaid24/muon/releases)
 
 <img src="docs/media/demo.gif" width="640" alt="Muon demo: disk cleanup, duplicates, TODO sweep, safe file moves, simulator builds, memory hogs, device list, web answers">
 
 <sub>Real recording of Muon on the reproducible demo workspace · [HD video](docs/media/demo.mp4)</sub>
+
+**[⬇ Download for macOS](https://github.com/harshdvaid24/muon/releases/latest)** · `brew install --cask harshdvaid24/tap/muon` · **[Website](https://harshdvaid24.github.io/muon/)**
+
+<sub>If Muon saves you time, a ⭐ helps other Mac users find it.</sub>
 
 </div>
 
@@ -134,7 +140,20 @@ Common, well-defined requests (open, find, largest files, duplicates, code searc
 
 ## Install
 
-Requirements: macOS 26 on Apple Silicon with Apple Intelligence on, Xcode 26, Node ≥ 20, `ripgrep` (`brew install ripgrep`). Optional: [LM Studio](https://lmstudio.ai) for multi-step planning, `gh` for GitHub Actions, Android SDK for emulators.
+Requirements: macOS 26 on Apple Silicon with Apple Intelligence on, and Node.js 20+ (`brew install node`). Optional: [LM Studio](https://lmstudio.ai) for multi-step planning, `gh` for GitHub Actions, Android SDK for emulators, `ripgrep` for faster code search.
+
+**Download (easiest)**
+1. Download **[Muon.zip](https://github.com/harshdvaid24/muon/releases/latest)** and move `Muon.app` to Applications.
+2. Open it. Muon is not notarized yet, so macOS may block it the first time: open System Settings › Privacy & Security and click **Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/Muon.app`).
+3. Press `⇧⌥Space`. Check your setup any time with `/Applications/Muon.app/Contents/MacOS/Muon --diagnose`.
+
+**Homebrew**
+
+```bash
+brew install --cask harshdvaid24/tap/muon
+```
+
+**From source** (Xcode 26)
 
 ```bash
 git clone https://github.com/harshdvaid24/muon.git && cd muon
@@ -152,8 +171,6 @@ lms get qwen/qwen3.5-4b@4bit --mlx -y    # low-memory fallback (~3 GB)
 Then right-click the menu bar icon → **Settings**: record your shortcut (default `⇧⌥Space`), review allowed folders, and grant **Accessibility** if you want menu commands in other apps.
 
 > **Shortcut does nothing?** Another app may own that combination. Open Settings › Shortcut › **Record** and press a different one — Muon registers exactly what your keyboard sends. Clicking the menu bar icon always works.
-
-> Muon is ad-hoc signed for local use. On first launch, right-click the app → **Open**.
 
 ## Safety model
 
