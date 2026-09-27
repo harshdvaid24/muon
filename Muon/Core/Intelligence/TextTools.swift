@@ -66,6 +66,8 @@ enum TextTools {
         t = t.replacingOccurrences(of: #"(?m)^#{1,6}\s*"#, with: "", options: .regularExpression)
         t = t.replacingOccurrences(of: #"\*\*(.+?)\*\*"#, with: "$1", options: .regularExpression)
         t = t.replacingOccurrences(of: #"(?m)^\s*[-*]\s+"#, with: "• ", options: .regularExpression)
+        t = t.replacingOccurrences(of: #"(?m)^[ \t]*```[^\n]*\n?"#, with: "", options: .regularExpression)
+        t = t.replacingOccurrences(of: #"`([^`\n]+)`"#, with: "$1", options: .regularExpression)
         return t.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 

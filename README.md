@@ -4,7 +4,7 @@
 
 # Muon
 
-**A local AI agent for your Mac.** Press a key, say what you need, and Muon finds, cleans up, opens, builds and answers — on-device, with zero idle footprint.
+**Your Mac's local AI, one keystroke away.** Fix your writing, explain errors, read documents and screenshots, turn recordings into meeting notes and receipts into expenses. On-device, private, free.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-macOS%2026-lightgrey)
@@ -13,9 +13,9 @@
 [![Release](https://img.shields.io/github/v/release/harshdvaid24/muon)](https://github.com/harshdvaid24/muon/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/harshdvaid24/muon/total)](https://github.com/harshdvaid24/muon/releases)
 
-<img src="docs/media/demo.gif" width="640" alt="Muon demo: disk cleanup, duplicates, TODO sweep, safe file moves, simulator builds, memory hogs, device list, web answers">
+<img src="docs/media/demo.gif" width="640" alt="Muon demo: rewriting an email, explaining an error, answering from a scanned PDF, reading a screenshot, meeting notes from a recording, totaling receipts">
 
-<sub>Real recording of Muon on the reproducible demo workspace · [HD video](docs/media/demo.mp4)</sub>
+<sub>Real recording on the reproducible demo workspace · [HD video](docs/media/demo.mp4)</sub>
 
 **[⬇ Download for macOS](https://github.com/harshdvaid24/muon/releases/latest)** · `brew install --cask harshdvaid24/tap/muon` · **[Website](https://harshdvaid24.github.io/muon/)**
 
@@ -23,124 +23,191 @@
 
 </div>
 
+Press `⇧⌥Space` and say what you need. Muon uses Apple's on-device model for the everyday things people open a chatbot for, and typed tools for the things they do by hand. It is a menu bar app with no background process and no idle load. Nothing leaves your Mac unless you ask for a web page.
+
 ## What it does for you
 
 | | |
 |---|---|
-| **Free up disk space** — *"what is taking space in ~/Downloads"* lists the biggest files, skipping `node_modules`, `Pods` and build folders. | ![largest files](docs/media/largest.png) |
-| **Find duplicates** — *"find duplicate files in ~/Downloads"* groups identical files and tells you how much space you'd get back. | ![duplicates](docs/media/duplicates.png) |
-| **Sweep your code** — *"search code for TODO in ~/Projects/weather-app"* shows every hit with its line; press ↩ to open the file. | ![todos](docs/media/todos.png) |
-| **Clean up safely** — *"move the screenshots in ~/Downloads into ~/Downloads/Archive"* lists the exact files and asks once. Deleting always means Trash. | ![cleanup](docs/media/cleanup_confirm.png) |
-| **Build & run** — *"run ~/Projects/weather-app on iPhone 17"* builds your React Native app on the simulator in the background and notifies you when it's done. | ![run on device](docs/media/run_confirm.png) |
-| **Find memory hogs** — *"which apps are using the most memory"* before your next build slows to a crawl. | ![memory](docs/media/memory.png) |
-| **Know your devices** — *"which simulators do I have"* lists iOS simulators, Android emulators and plugged-in phones. | ![devices](docs/media/devices.png) |
-| **Quick answers** — *"what is react native"* answers from the web without leaving your flow. | ![web](docs/media/web.png) |
+| **Fix your writing.** Copy text in any app, then ask *"make this professional"*, *"fix grammar"*, *"shorten"* or *"reply saying I'll be there at 5"*. The result has **Copy** and **Paste** buttons. Paste puts it straight back into the app you came from. About one second, on-device. | ![professional rewrite](docs/media/professional.png) |
+| **Explain errors and code.** Copy an error, a stack trace, a block of code or some jargon and ask *"explain this"*. Muon says what it means and what to do about it. | ![explain error](docs/media/explain_error.png) |
+| **Ask your documents.** *"what does ~/Documents/MuonDemo/lease.pdf say about the deposit"* answers from the file. PDF, .docx, .txt, .md, .csv, .json and images. Scanned PDFs are read with on-device OCR. | ![lease answer](docs/media/lease.png) |
+| **Read screenshots.** *"explain the error in this screenshot"* reads your newest screenshot with on-device OCR and explains what went wrong. Also *"read the latest screenshot"* and *"rename my screenshots"* by what they show. | ![screenshot error](docs/media/screenshot_error.png) |
+| **Meeting notes from a recording.** *"meeting notes from ~/Downloads/standup.mp4"* transcribes on-device and returns a summary, the decisions and the action items. Audio and video files. | ![meeting notes](docs/media/meeting.png) |
+| **Receipts into expenses.** *"total the receipts in ~/Documents/Receipts"* reads each receipt photo, lists merchant, date and total, adds them up, and saves a CSV after one confirmation. | ![receipts](docs/media/receipts.png) |
+| **Developer chores.** *"search code for TODO in ~/Projects/weather-app"* shows every hit; press ↩ to open it. Also *"run weather-app on iPhone 17"*, *"commit this"*, *"clean the metro caches"* and *"why did my app crash"*. | ![todos](docs/media/todos.png) |
+| **Files, disk and apps.** *"move the screenshots in ~/Downloads into ~/Downloads/Archive"* lists the exact files and asks once. Delete always means Trash. Also largest files, duplicates, memory hogs and menu commands in any app. | ![cleanup](docs/media/cleanup_confirm.png) |
 
-**Try exactly what the video shows:** `scripts/demo-workspace.sh` creates a throwaway `~/Documents/MuonDemo` with a sample app, TODOs, big files, duplicates and screenshots.
+**Try it yourself:** `scripts/demo-workspace.sh` creates a throwaway `~/Documents/MuonDemo` with a sample app, an error screenshot, a scanned lease PDF, three receipt photos, an inbox with a client email and an error log, and a spoken standup clip.
+
+## It gets smarter, not heavier
+
+Muon has no indexer and no background job. It learns from what you do with it.
+
+| | |
+|---|---|
+| **For you.** Open the empty palette and Muon suggests what is worth doing: old screenshots to archive, how big Downloads has grown, duplicate space to reclaim, a recent crash to explain. If an error is on your clipboard it offers to explain it; a URL, to summarize it; long text, to summarize it. Computed at most once a day, only when you open the palette. | ![for you](docs/media/foryou.png) |
+| **Rules.** A cleanup you have run three times is offered as a weekly rule. Or ask directly: *"every monday move the screenshots in ~/Downloads older than 30 days into ~/Downloads/Archive"*. Rules run on wake or launch with a notification. *"undo"* reverses the last automated move or rename. Managed in Settings. | ![rule saved](docs/media/rule.png) |
+
+**Memory.** Repeated requests are answered from a capped local cache in milliseconds, with no model at all. Muon learns your project aliases. `save macro <name>` replays a multi-step action by name.
 
 ## Everything you can ask
 
-Muon understands plain language. These are examples, not a fixed syntax.
+Muon understands plain language. These are examples. There is no fixed syntax.
 
-### Apps
+### Writing
+
+Copy text in any app, then ask. Every result has **Copy** and **Paste**. Paste goes straight into the app you came from when Accessibility is granted.
+
 | Ask | What happens |
 |---|---|
-| `open xcode` · `open safari` | Launches or focuses the app |
-| `quit spotify` | Asks the app to quit (it can save first) — *asks you first* |
-| `which apps are using the most memory` | Running apps sorted by RAM |
-| `force quit <pid>` | Terminates a stuck process — *native confirmation dialog* |
-| `in safari open a new private window` | Runs any app's menu command (Safari ▸ File ▸ New Private Window) — *asks first, needs Accessibility* |
-| `what menus does notes have` | Lists an app's menu commands so you can drive it |
+| `fix grammar` | Corrects grammar and spelling, keeps your wording |
+| `make this professional` | Rewrites in a tone: formal, casual, friendly, polite, confident, concise, clear or simple |
+| `shorten` · `expand` · `simplify` · `bullet points` | Rewrites the clipboard text that way |
+| `summarize this` · `summarize this in one line` · `as bullets` · `in detail` | A summary at the length you ask for |
+| `explain this` | Explains an error, stack trace, code or jargon |
+| `reply saying I'll be there at 5` | Drafts a reply to the message on your clipboard |
+| `extract the action items` | Also dates, amounts, emails, names, links and key points |
+| `draft an email about the delayed shipment` | Writes an email from scratch |
+| `summarize: <text>` | Inline form, no clipboard needed |
 
-### Files and folders
+On-device, about one second. Long text goes to the local LM Studio model automatically, or is processed in parts.
+
+### Documents and web
 | Ask | What happens |
 |---|---|
-| `find package.json in ~/Projects/weather-app` | Finds files by name |
-| `find pdfs about invoices` | Spotlight search by content, kind or date |
-| `show me ~/Projects/weather-app/README.md` | Reads a text file (first 20 KB) |
-| `what is inside ~/Downloads` | Lists a folder |
-| `reveal ~/Downloads/report.pdf in finder` | Shows it in Finder |
-| `open ~/Documents/plan.pdf` | Opens with the default app (never runs apps or scripts) |
-| `move the screenshots in ~/Downloads into ~/Downloads/Archive` | Exact file list, one confirmation |
-| `archive the pdfs on my desktop` | Moves them into `Desktop/Archive` |
-| `trash zips in downloads older than 30 days` | Moves matching files to the Trash |
-| `rename`, `copy`, `create folder` | Available to the planner, each confirmed |
-
-### Disk space
-| Ask | What happens |
-|---|---|
-| `what is taking space in ~/Downloads` | Largest files |
-| `find duplicate files in ~/Downloads` | Identical files and reclaimable space |
-| `how much disk space is free` | Disk, RAM, CPU load, battery and thermal state |
-
-### Projects and code
-| Ask | What happens |
-|---|---|
-| `list my projects` | Projects in `~/Projects` and `~/Work` with their type |
-| `open weather-app in vs code` · `open weather-app in xcode` | Opens the project in your editor |
-| `search code for FirebaseApp.configure` | ripgrep across your projects |
-| `search code for TODO in ~/Projects/weather-app` | Scoped to one folder |
-| `how many react native projects do I have and which use firebase?` | Multi-step: the local model plans and runs several searches |
-
-### Developer workflows
-| Ask | What happens |
-|---|---|
-| `which simulators do I have` | iOS simulators, Android emulators, connected devices |
-| `run ~/Projects/weather-app on iPhone 17` | Builds and launches a React Native app on the simulator — *background job* |
-| `run weather-app on pixel 9` | Boots the Android emulator and runs the app — *background job* |
-| `job status` · `is my build done` | Progress and logs of background builds; a notification arrives when each finishes |
-| `list the workflows in weather-app` | GitHub Actions workflows (via `gh`) |
-| `trigger the release workflow in weather-app on main` | Starts a workflow run — *native confirmation dialog, since releases are hard to undo* |
-| `show recent workflow runs in weather-app` | Status, result and link for recent runs |
-
-### Web and chat
-| Ask | What happens |
-|---|---|
+| `summarize ~/Documents/lease.pdf` | Summary of a PDF, .docx, .txt, .md, .csv, .json or image |
+| `what does ~/Documents/lease.pdf say about the deposit` | Answers from the document |
+| `ask ~/notes.txt: who is the owner` | Same, inline form |
+| `summarize https://example.com/post` | One read-only fetch, only when you ask |
+| `what does https://example.com/pricing say about the free plan` | Answers from the page |
 | `what is typescript` · `search the web for swift concurrency` | A short answer with its source |
 | `open github.com` | Opens it in your browser |
-| `hi` · `what can you do` | A one-line conversational reply, on-device |
 
-### Learning and shortcuts
+PDFs that contain only scanned pages are read with on-device OCR.
+
+### Screenshots and images
 | Ask | What happens |
 |---|---|
-| *(repeat any request)* | Answered from local memory in milliseconds, with no model at all |
-| `save macro morning` | Saves your last multi-step actions; type `morning` to replay |
-| `agent: <anything>` | Forces the larger local model for a hard request |
+| `read the latest screenshot` | Text from your newest screenshot, on-device OCR |
+| `copy text from ~/Desktop/shot.png` | OCR to the clipboard |
+| `explain the error in this screenshot` | OCR plus explanation. No LM Studio needed |
+| `describe ~/Desktop/a.png: which app is this` | Image understanding via the local vision model in LM Studio |
+| `compare ~/Desktop/actual.png with ~/Designs/expected.png` | Lists the visual differences |
+| `rename my screenshots` | Names by content, for example `2026-09-27-xcode-build-error-reanimated.png`. One confirmation |
+
+Settings › Automation › **Name new screenshots by their content** names each screenshot as it lands. `undo` reverts the last one.
+
+### Voice
+| Ask | What happens |
+|---|---|
+| `transcribe ~/Downloads/call.m4a` | Transcript, on-device SpeechAnalyzer |
+| `meeting notes from ~/Downloads/standup.mp4` | Summary, decisions and action items. Audio and video files |
+
+### Expenses
+| Ask | What happens |
+|---|---|
+| `total the receipts in ~/Documents/Receipts` | Merchant, date, total and currency per receipt, the sum, and a CSV saved after one confirmation |
+
+### Crashes
+| Ask | What happens |
+|---|---|
+| `why did my app crash` · `why did Safari crash` | Reads crash reports from the last 48 hours and explains the crashed thread and likely cause |
+
+Crash reports are read from `~/Library/Logs/DiagnosticReports` only, read-only. This is the one exception to the path policy below.
+
+### Developer
+| Ask | What happens |
+|---|---|
+| `run ~/Projects/weather-app on iPhone 17` · `run weather-app on pixel 9` | Builds and launches a React Native app. Background job, notification when done |
+| `which simulators do I have` | iOS simulators, Android emulators and connected devices |
+| `is my build done` · `job status` | Progress and logs of background builds |
+| `what changed` · `commit this` · `push` | git status, diff, commit with your message, push. Never force, never amend. Commit and push ask first |
+| `clean the metro caches` | Frees ports 8081 and 8097, resets watchman, clears the Metro and haste caches |
+| `pair my watch 192.168.1.20:41234 code 123456` · `connect 192.168.1.20:41234` | Wireless adb pairing and connection |
+| `install ~/Downloads/app.apk on my phone` | Installs on the connected device |
+| `build a signed apk for weather-app` | Android release build |
+| `list the workflows in weather-app` · `show recent workflow runs in weather-app` | GitHub Actions, via `gh` |
+| `trigger the release workflow in weather-app on main` | Starts a run. Native confirmation dialog |
+| `search code for TODO in ~/Projects/weather-app` | Every hit with its line. Press ↩ to open it |
+| `open weather-app in vs code` · `open weather-app in xcode` | Opens the project in your editor |
+| `list my projects` | Projects in `~/Projects` and `~/Work` with their type |
+
+### Files, disk and apps
+| Ask | What happens |
+|---|---|
+| `what is taking space in ~/Downloads` | Largest files, skipping `node_modules`, `Pods` and build folders |
+| `find duplicate files in ~/Downloads` | Identical files and the space you would get back |
+| `how much disk space is free` | Disk, RAM, CPU load, battery and thermal state |
+| `move the screenshots in ~/Downloads into ~/Downloads/Archive` | Exact file list, one confirmation |
+| `trash zips in downloads older than 30 days` | Moves matching files to the Trash |
+| `archive the pdfs on my desktop` | Moves them into `Desktop/Archive` |
+| `find pdfs about invoices` | Spotlight search by content, kind or date |
+| `find package.json in ~/Projects/weather-app` | Finds files by name |
+| `what is inside ~/Downloads` · `reveal ~/Downloads/report.pdf in finder` | Lists a folder, shows a file in Finder |
+| `open xcode` · `quit spotify` | Launches an app, or asks it to quit. Quit asks you first |
+| `which apps are using the most memory` | Running apps sorted by RAM |
+| `in safari open a new private window` | Runs any app's menu command. Asks first, needs Accessibility |
+| `what menus does notes have` | Lists an app's menu commands |
+
+### Automation and memory
+| Ask | What happens |
+|---|---|
+| *(open the empty palette)* | **For you** rows: screenshots to archive, Downloads size, duplicate space, recent crashes, clipboard triage, and a cleanup you have run three times offered as a weekly rule |
+| `every monday move the screenshots in ~/Downloads older than 30 days into ~/Downloads/Archive` | Saved as a rule. Only deterministic cleanups can become rules. Runs on wake or launch with a notification |
+| `undo` | Reverses the last automated move or rename |
+| *(repeat any request)* | Answered from local memory in milliseconds, no model |
+| `save macro morning` | Saves your last multi-step actions. Type `morning` to replay |
 
 ### Ways in
 | Where | How |
 |---|---|
-| Keyboard | `⇧⌥Space` opens the palette — or record any shortcut in **Settings › Shortcut › Record** |
-| Menu bar | Click the icon; right-click for model status, macros and Settings |
-| Spotlight, Shortcuts, Siri | **Ask Muon**, **Open Project**, **Run Macro** |
-| Scripts, Raycast | `open "muon://ask?q=what%20is%20taking%20space%20in%20~/Downloads"` |
-| Terminal | `Muon.app/Contents/MacOS/Muon --query "…" [--yes] [--tier 2]` |
+| Keyboard | `⇧⌥Space` opens the palette. Record any shortcut in **Settings › Shortcut › Record** |
+| Menu bar | Click the icon. Right-click for model status, macros and Settings |
+| Spotlight, Shortcuts, Siri | App Intents: **Ask Muon**, **Open Project**, **Run Macro** |
+| Scripts, Raycast | `open "muon://ask?q=fix%20grammar"` |
+| Terminal | `Muon.app/Contents/MacOS/Muon --query "…" [--yes] [--tier 2]` runs headless. `--diagnose` checks your setup. `--suggest` prints the For you rows |
 
 ## How it works
 
 ```
-  ⇧⌥Space ──▶ Liquid Glass palette
+  ⇧⌥Space ──▶ Liquid Glass palette ──▶ optional Laya hint (~150 ms)
+                    │
+     deterministic parsers first: writing, documents, screenshots,
+     cleanup, rules. The common requests never depend on a model guessing.
                     │
       ┌─────────────┼───────────────────────────┐
       ▼             ▼                           ▼
    Tier 0        Tier 1                      Tier 2
-   memory        Apple on-device model       LM Studio (MLX), on demand
-   0 ms          ~1 s, no app memory         only when the Mac can spare it,
-                 single steps + chat         unloads after 5 min
+   memory        Apple on-device model       LM Studio (Qwen 3.5, MLX)
+   0 ms          ~1 s, no app memory         multi-step plans, images,
+   repeats       single steps, chat, all     very long text. Loads only when
+                 writing and explaining      the Mac can spare it, unloads in 5 min
       └─────────────┴─────────────┬─────────────┘
                                   ▼
-                 mac-tools · TypeScript MCP server
-                 typed tools · path policy · audit log
-                 starts on demand, exits after 5 min idle
+       in-app tools (Swift)              mac-tools (TypeScript MCP server)
+       OCR, Vision, SpeechAnalyzer,      typed tools, path policy, audit log
+       documents, receipts, crashes      starts on demand, exits after 5 min idle
                                   ▼
-          files · apps · menus · disk · simulators · GitHub · web
+   text · documents · screenshots · voice · files · apps · disk · devices · git · GitHub · web
 ```
 
-Common, well-defined requests (open, find, largest files, duplicates, code search, cleanup) are handled by the on-device tier or by deterministic parsers — fast and predictable. The local LLM only plans genuinely multi-step work.
+Tier 0 is a capped local cache. Tier 1 is Apple's on-device model: single steps, chat, and all writing and explaining. Tier 2 is LM Studio, used only for multi-step planning, image understanding and very long text. It loads only when memory, thermal state and battery allow, and unloads after five minutes. Everything works without LM Studio and without Laya; those two only add power.
+
+## Private by design
+
+- **No shell, ever.** Every capability is a typed tool running an allowlisted binary with an argument array. Never a command string.
+- **Path policy.** Paths are normalized and symlink-resolved and must live in an allowed folder (`~/Projects ~/Work ~/Downloads ~/Documents ~/Desktop` by default). `~/Library`, `~/.ssh`, `/System` and other protected locations are always refused. Symlinks and the allowed roots themselves are refused for changes. One documented exception: crash reports are read from `~/Library/Logs/DiagnosticReports`, read-only.
+- **Every change asks first.** Moves, renames, trash, quitting apps, menu commands, builds, git commit and push, and saving files all ask, with "Always allow in this folder". Force-quit and GitHub workflow triggers use a native dialog.
+- **Delete means Trash.** Nothing is ever permanently deleted.
+- **Opening never executes.** `open` refuses apps, scripts and executables.
+- **The internet is a few named tools.** Only `webSearch`, `readWebPage` and `openInBrowser` go online (and `gh` when you ask). Your text, documents, screenshots and recordings stay on the Mac.
+- **Audit log** of every tool call at `~/Library/Application Support/Muon/audit.jsonl`. Paths only, never contents, kept 30 days.
+- **Machine protection.** The larger model loads only when memory, thermal state, battery and running builds allow it.
 
 ## Install
 
-Requirements: macOS 26 on Apple Silicon with Apple Intelligence on, and Node.js 20+ (`brew install node`). Optional: [LM Studio](https://lmstudio.ai) for multi-step planning, `gh` for GitHub Actions, Android SDK for emulators, `ripgrep` for faster code search.
+Requirements: macOS 26 on Apple Silicon with Apple Intelligence on, and Node.js 20+ (`brew install node`). Optional: [LM Studio](https://lmstudio.ai) for multi-step planning and images, `gh` for GitHub Actions, Android SDK for emulators, `ripgrep` for faster code search.
 
 **Download (easiest)**
 1. Download **[Muon.zip](https://github.com/harshdvaid24/muon/releases/latest)** and move `Muon.app` to Applications.
@@ -161,31 +228,29 @@ cd mac-tools && npm install && npm run build && cd ..
 scripts/build.sh && scripts/run.sh
 ```
 
-Multi-step planning (optional, one time):
+Then right-click the menu bar icon and open **Settings**: record your shortcut (default `⇧⌥Space`), review allowed folders, and grant **Accessibility** if you want Paste into other apps and menu commands.
+
+> **Shortcut does nothing?** Another app may own that combination. Open Settings › Shortcut › **Record** and press a different one. Muon registers exactly what your keyboard sends. Clicking the menu bar icon always works.
+
+## Optional backends
+
+**LM Studio** adds multi-step planning, image understanding and very long text. One time:
 
 ```bash
 lms get qwen/qwen3.5-9b@4bit --mlx -y    # main model (~6 GB)
 lms get qwen/qwen3.5-4b@4bit --mlx -y    # low-memory fallback (~3 GB)
 ```
 
-Then right-click the menu bar icon → **Settings**: record your shortcut (default `⇧⌥Space`), review allowed folders, and grant **Accessibility** if you want menu commands in other apps.
+Muon loads the model only when memory, thermal state and battery allow, and unloads it after five minutes idle.
 
-> **Shortcut does nothing?** Another app may own that combination. Open Settings › Shortcut › **Record** and press a different one — Muon registers exactly what your keyboard sends. Clicking the menu bar icon always works.
+**Laya** ([github.com/NandhaKishorM/laya](https://github.com/NandhaKishorM/laya)) adds ~150 ms typed routing hints and language detection, so you can type requests in 100+ languages (non-English input needs LM Studio).
 
-## Safety model
+```bash
+pip install "laya[serve]"
+LAYA_PORT=8765 laya-serve
+```
 
-- **No shell.** Every capability is a typed tool running an allowlisted binary with argument arrays — never a command string. Background jobs have their own short allowlist.
-- **Path policy.** Paths are normalized and symlink-resolved, must live in an allowed folder (`~/Projects ~/Work ~/Downloads ~/Documents ~/Desktop` by default), and protected locations (`~/Library`, `~/.ssh`, `/System`, …) are always refused. Symlinks, allowed roots themselves, and moving a folder into itself are refused for changes.
-- **You approve changes.** Reading runs freely. Moving, copying, renaming, trashing, quitting apps, menu commands and simulator builds ask first, with "Always allow in this folder". Force-quit and GitHub workflow triggers use a native confirmation dialog.
-- **Delete means Trash.** Nothing is ever permanently deleted.
-- **Opening never executes.** `open` refuses apps, scripts and executables.
-- **Network is one tool.** Only `webSearch` / `openInBrowser` go online (and `gh` for GitHub, when you ask).
-- **Audit log** of every tool call (paths only, never contents) at `~/Library/Application Support/Muon/audit.jsonl`, kept 30 days.
-- **Machine protection.** The larger model loads only when memory, thermal state, battery and running builds allow it.
-
-## Learning, without the bloat
-
-A capped SQLite store (`memory.db`) keeps an intent cache, project aliases, app and folder frecency, and macros — 300 rows per table, 14-day half-life, pruned at launch. No fine-tuning, no embeddings, no background indexing. The more you use Muon, the more requests skip the model entirely.
+Then turn on **Settings › Laya**. Everything works without both; they only add power.
 
 ## Use the tools from other apps
 
@@ -195,24 +260,29 @@ A capped SQLite store (`memory.db`) keeps an intent cache, project aliases, app 
 claude mcp add mac-tools -- node /path/to/muon/mac-tools/dist/index.js
 ```
 
-Tools: `searchFiles` `findFiles` `searchCode` `readFile` `listDirectory` `listProjects` `matchFiles` `largestFiles` `findDuplicates` `openApplication` `openPath` `revealInFinder` `moveItems` `copyItems` `renameItem` `createFolder` `trashItems` `quitApplication` `killProcess` `listRunningApps` `getSystemStats` `listMenus` `runMenuCommand` `listDevices` `runOnDevice` `jobStatus` `listWorkflows` `workflowRuns` `triggerWorkflow` `webSearch` `openInBrowser`
+Tools: `searchFiles` `findFiles` `searchCode` `readFile` `listDirectory` `listProjects` `matchFiles` `largestFiles` `findDuplicates` `openApplication` `openPath` `revealInFinder` `moveItems` `copyItems` `renameItem` `createFolder` `trashItems` `writeTextFile` `quitApplication` `killProcess` `listRunningApps` `getSystemStats` `listMenus` `runMenuCommand` `listDevices` `runOnDevice` `jobStatus` `listWorkflows` `workflowRuns` `triggerWorkflow` `readWebPage` `gitStatus` `gitDiff` `gitCommit` `gitPush` `cleanDevCaches` `adbPair` `adbConnect` `installApp` `buildAndroidRelease` `webSearch` `openInBrowser`
+
+The app adds in-process Swift tools that the planner also gets: `rewriteText` `summarizeText` `explainText` `readDocument` `extractTextFromImage` `describeImage` `compareImages` `proposeScreenshotNames` `recentCrashes` `transcribeAudio` `meetingNotes` `totalReceipts`
 
 ## Development
 
 ```bash
-cd mac-tools && npm test     # tool server
-scripts/build.sh test        # app
-scripts/demo-workspace.sh    # sample workspace for manual testing
+cd mac-tools && npm test     # tool server, 62 tests
+scripts/build.sh test        # app, 63 tests
+scripts/demo-workspace.sh    # sample workspace in ~/Documents/MuonDemo
 ```
 
 Design notes: [`docs/superpowers`](docs/superpowers) · Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Known limitations
 
-- Run-on-device supports React Native projects; for native Xcode projects, Muon opens the workspace so you can press Run.
-- Android runs need an emulator created in Android Studio (or a connected phone).
-- LM Studio ignores `--context-length` for these MLX models; set a cap in LM Studio's model settings if you want one.
-- CI tests the tool server; the macOS 26 app is built locally.
+- The app is ad-hoc signed. First launch: System Settings › Privacy & Security › **Open Anyway**.
+- The on-device tier needs Apple Intelligence. Without it, everything routes to LM Studio.
+- Image understanding and very long text need LM Studio.
+- Run-on-device supports React Native. For native Xcode projects, Muon opens the workspace so you can press Run.
+- Android runs need an emulator created in Android Studio, or a connected phone.
+- The multi-step planner with the 4B model can take 30 to 60 s on a busy Mac.
+- CI tests the tool server. The macOS 26 app is built locally.
 
 ## License
 

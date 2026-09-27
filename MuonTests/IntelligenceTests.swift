@@ -77,4 +77,7 @@ import Testing
     @Test func markdownStripped() {
         #expect(TextTools.clean("### Fix\n**Run** pod install\n- one\n- two") == "Fix\nRun pod install\n• one\n• two")
     }
+    @Test func codeFencesStripped() {
+        #expect(TextTools.clean("Use `map` here:\n```javascript\nconst a = 1\n```\ndone") == "Use map here:\nconst a = 1\ndone")
+    }
 }
