@@ -53,7 +53,7 @@ enum CLI {
         Task {
             let started = Date()
             let out = await Agent.shared.run(query, approver: YesApprover(yes: yes), status: { print("… \($0)") }, forceTier: force)
-            print("tier=\(out.tier) ms=\(Int(Date().timeIntervalSince(started) * 1000))")
+            print("tier=\(out.tier) ms=\(Int(Date().timeIntervalSince(started) * 1000))\(out.model.map { " via=\($0)" } ?? "")")
             for r in out.results { print("tool=\(r.tool) ok=\(r.ok)\(r.cancelled ? " cancelled" : "") args=\(Agent.json(r.args))") }
             for s in out.suggestions { print("suggest: \(s.title) — \(s.subtitle ?? "") [\(s.tool) \(Agent.json(s.args))]") }
             if let r = out.result { print("result (\(r.label) · \(r.source)):\n\(r.text)") }

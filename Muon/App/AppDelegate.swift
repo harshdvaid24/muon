@@ -288,7 +288,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         else if !out.results.isEmpty || !out.suggestions.isEmpty || out.result != nil { Sound.play(.success) }
         let secs = Date().timeIntervalSince(started)
         let time = secs < 1 ? "\(Int(secs * 1000)) ms" : String(format: "%.1f s", secs)
-        let source = out.tier == 0 ? "from memory" : out.tier == 1 ? "on-device" : (out.model ?? "local model")
+        let source = out.model ?? (out.tier == 0 ? "from memory" : out.tier == 1 ? "on-device" : "local model")
         m.footer = "\(source) · \(time)"
         m.rows = out.suggestions.map { s in
             PaletteModel.Row(icon: s.icon, title: s.title, subtitle: s.subtitle, section: s.section) { [weak self] in

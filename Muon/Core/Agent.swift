@@ -190,7 +190,7 @@ final class Agent {
             return finish(await tier2(q, approver: approver, status: status, out: out), query: q)
         }
 
-        if let cached = memory?.cacheLookup(q), let args = Self.parseArgs(cached.argsJSON) {
+        if ProcessInfo.processInfo.environment["MUON_NO_CACHE"] == nil, let cached = memory?.cacheLookup(q), let args = Self.parseArgs(cached.argsJSON) {
             status("From memory…")
             let r = await execute(cached.tool, args, approver: approver, status: status)
             if r.cancelled { out.cancelled = true; return out }
@@ -200,6 +200,29 @@ final class Agent {
                 return finish(out, query: q)
             }
             memory?.cacheInvalidate(q)
+        }
+
+        // Experimental: Needle 3 (Settings › Needle). ~50 ms per decision; acts only when confident and only on tools
+        // that cannot change anything without a card. Otherwise the request continues to the on-device model.
+        if forceTier == nil, Needle.enabled, await Needle.isReachable() {
+            status("Needle…")
+            try? await MCPClient.shared.ensureStarted()
+            if let call = await Needle.route(q, tools: MCPClient.shared.tools) {
+                if call.confidence >= Needle.threshold, Needle.routable.contains(call.tool) {
+                    let r = await execute(call.tool, call.anyArgs, approver: approver, status: status)
+                    if r.cancelled { out.cancelled = true; return out }
+                    if r.ok {
+                        out.tier = 1; out.results = [r]; out.model = "Needle 3 · \(call.ms) ms"
+                        render(r, into: &out)
+                        return finish(out, query: q)
+                    }
+                    out.note = "Needle chose \(call.tool) but it failed; asked the on-device model instead."
+                } else {
+                    out.note = "Needle: \(call.tool) at \(Int(call.confidence * 100))% in \(call.ms) ms, below the \(Int(Needle.threshold * 100))% bar; asked the on-device model instead."
+                }
+            } else {
+                out.note = "Needle had no confident tool call; asked the on-device model instead."
+            }
         }
 
         if FoundationTier.isAvailable {

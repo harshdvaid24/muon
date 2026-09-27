@@ -18,6 +18,8 @@ struct SettingsView: View {
     @State private var rules = Rules.all
     @AppStorage(ScreenshotWatcher.settingKey) private var autoName = false
     @AppStorage("layaEnabled") private var layaEnabled = true
+    @AppStorage("needleEnabled") private var needleEnabled = false
+    @AppStorage("needleURL") private var needleURL = "http://127.0.0.1:8766"
     @AppStorage("layaURL") private var layaURL = "http://127.0.0.1:8765"
     @AppStorage("hotkey") private var hotkey = HotKey.Preset.shiftOptSpace.rawValue
     @AppStorage("sounds") private var sounds = true
@@ -113,6 +115,12 @@ struct SettingsView: View {
                 Toggle("Use Laya when running", isOn: $layaEnabled)
                 TextField("Server URL", text: $layaURL)
                 Text("pip install \"laya[serve]\" then LAYA_PORT=8765 laya-serve. Adds ~150 ms routing hints and lets you type requests in 100+ languages (translated via LM Studio).")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Needle (experimental fast tool calls)") {
+                Toggle("Use Needle when running", isOn: $needleEnabled)
+                TextField("Server URL", text: $needleURL)
+                Text("Needle 3 (cactus-needle) is a 29 MB tool-calling model: ~50 ms per decision. It acts only when at least 90% sure and only on tools that cannot change anything without a card; otherwise the on-device model answers as usual. The palette footer shows which one answered. Start it with: python3 -m venv ~/.muon/needle && ~/.muon/needle/bin/pip install cactus-needle && ~/.muon/needle/bin/python scripts/needle-serve.py")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Macros") {

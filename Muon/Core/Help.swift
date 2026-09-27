@@ -44,7 +44,8 @@ enum Help {
             "open xcode  ·  quit spotify", "which apps are using the most memory", "in safari open a new private window", "what menus does notes have"]),
         ("Automation and memory", [
             "every monday move the screenshots in ~/Downloads older than 30 days into ~/Downloads/Archive", "undo",
-            "save macro morning  (then type “morning” to replay)", "Open the empty palette for “For you” suggestions and your recent requests"]),
+            "save macro morning  (then type “morning” to replay)", "Open the empty palette for “For you” suggestions and your recent requests",
+            "Settings › Needle: an experimental 50 ms tool-calling model; the footer shows whether Needle or the on-device model answered"]),
         ("Keys", [
             "⇧⌥Space open  ·  ↩ run or allow  ·  esc close or cancel", "↑ ↓ move through suggestions and recent requests  ·  ⇥ edit a recent one",
             "⌘O attach a file  ·  ⌘V paste an image or file  ·  ⌘⇧M talk"]),

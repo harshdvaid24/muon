@@ -265,6 +265,30 @@ LAYA_PORT=8765 laya-serve
 
 Then turn on **Settings › Laya**. Everything works without both; they only add power.
 
+
+### Needle (experimental)
+
+[Needle 3](https://github.com/cactus-compute/needle) is a 121M-parameter, 2-bit (29 MB) tool-calling model. Muon can ask it first for simple, non-destructive requests: about **50 ms** per decision against **~1.2 s** for the on-device model. Measured on Muon's own routing tools it was often wrong at full confidence (see the table), so it is off by default, acts only when at least 90% sure, never on tools that move or delete files, and the palette footer always says who answered.
+
+| Request | Off (on-device) | On (Needle 3) |
+|---|---|---|
+| which simulators do I have | listDevices · 2.0 s | listDevices · **0.5 s** |
+| find pdfs about tax | searchFiles · 2.2 s | searchFiles · **0.5 s** |
+| is my mac hot | getSystemStats · 2.9 s | **wrong:** searchFiles · 2.1 s |
+| what is inside ~/Downloads | listDirectory · 1.8 s | **wrong:** searchCode · 0.9 s |
+| which apps are using the most memory | listRunningApps · 1.9 s | **wrong:** listProjects · 0.3 s |
+| where is package.json in weather-app | findFiles · 2.7 s | 64% sure, handed to on-device · 2.8 s |
+
+<p><img src="docs/media/needle_on.png" width="320" alt="Palette footer: Needle 3 · 58 ms"> <img src="docs/media/needle_off.png" width="320" alt="Palette footer: on-device · 2.5 s"></p>
+
+Nine requests, end to end from the command line: on-device 9/9 right; Needle 4 right, 4 wrong, 1 handed back. Turn it on in **Settings › Needle** to see it yourself; a fine-tune on your own requests is what would make it useful.
+
+```bash
+python3 -m venv ~/.muon/needle && ~/.muon/needle/bin/pip install cactus-needle
+~/.muon/needle/bin/python scripts/needle-serve.py     # 127.0.0.1:8766, nothing leaves the Mac
+MUON_NO_CACHE=1 Muon.app/Contents/MacOS/Muon --query "is my mac hot"   # prints via=Needle 3 · NN ms when Needle answered
+```
+
 ## Use the tools from other apps
 
 `mac-tools` is a standard MCP server, so any MCP client can use the same safe tools:
