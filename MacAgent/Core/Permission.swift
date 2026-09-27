@@ -71,6 +71,7 @@ enum Permission {
         case "renameItem": return "pencil"
         case "quitApplication": return "xmark.app.fill"
         case "killProcess": return "bolt.slash.fill"
+        case "runMenuCommand": return "filemenu.and.cursorarrow"
         default: return "checkmark.shield.fill"
         }
     }
@@ -86,6 +87,10 @@ enum Permission {
         case "createFolder": return ("Create folder", short(args["path"] as? String ?? "?"))
         case "quitApplication": return ("Quit \(args["name"] as? String ?? "app")", "It may ask you to save unsaved work.")
         case "killProcess": return ("Force-terminate process \(args["pid"] ?? "?")", "Unsaved work in that process will be lost.")
+        case "runMenuCommand":
+            let app = args["name"] as? String ?? args["app"] as? String ?? "app"
+            let path = (args["path"] as? [String]) ?? []
+            return ("\(app): \(path.joined(separator: " ▸ "))", "Runs this menu command in \(app).")
         default:
             let detail = args.map { "\($0.key): \(short(String(describing: $0.value)))" }.sorted().joined(separator: "\n")
             return ("Run \(tool)", detail)

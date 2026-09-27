@@ -1,3 +1,4 @@
+import ApplicationServices
 import ServiceManagement
 import SwiftUI
 
@@ -15,6 +16,7 @@ struct SettingsView: View {
     @State private var macros = Agent.shared.memory?.macros() ?? []
     @AppStorage("hotkey") private var hotkey = HotKey.Preset.ctrlOptSpace.rawValue
     @AppStorage("sounds") private var sounds = true
+    @State private var axTrusted = AXIsProcessTrusted()
 
     var body: some View {
         Form {
@@ -34,6 +36,23 @@ struct SettingsView: View {
                     }
                 if let loginError { Text(loginError).font(.caption).foregroundStyle(.secondary) }
                 LabeledContent("On-device model") { Text(FoundationTier.isAvailable ? "Available" : (FoundationTier.unavailableReason ?? "Unavailable")).foregroundStyle(.secondary) }
+            }
+            Section("App control") {
+                LabeledContent("Accessibility") {
+                    HStack(spacing: 8) {
+                        Image(systemName: axTrusted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(axTrusted ? .green : .orange)
+                        Text(axTrusted ? "Granted" : "Not granted")
+                        if !axTrusted {
+                            Button("Grant…") {
+                                AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") { NSWorkspace.shared.open(url) }
+                            }
+                        }
+                    }
+                }
+                Text("Needed to run menu commands in other apps (runMenuCommand). Read-only tools don't need it.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Local model (LM Studio)") {
                 TextField("Model", text: $model)

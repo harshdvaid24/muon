@@ -63,3 +63,7 @@ claude mcp add mac-tools -- node ~/Work/MacAgent/mac-tools/dist/index.js
 - Tier 1 needs Apple Intelligence enabled; without it every request goes to LM Studio.
 - `mac-tools` is run from the repo path (see Settings → Tool server); it is not bundled into the .app yet.
 - Hotkey presets only (⌘⇧Space default); free-form recorder not yet implemented.
+
+## Controlling any app
+
+`runMenuCommand(app, path)` clicks a menu item in any running app, so MacAgent can use essentially every function an app exposes — e.g. `Safari ▸ File ▸ New Private Window`, `Notes ▸ File ▸ New Note`. `listMenus(app[, menu])` discovers the titles. Menu control is confirm-gated (asked before each run) and requires Accessibility permission (Settings › App control › Grant, or System Settings › Privacy & Security › Accessibility). Menu titles are validated, so a title can never inject AppleScript.
